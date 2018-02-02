@@ -12,3 +12,14 @@ View and apply methods on gestures
 - OpenNI v1.5.7.10
 
 - PCL 1.8
+
+## Compile and run (OSX and Linux)
+
+1 - Create the build dir:
+** mkdir build
+2 - Enter inside the build and run:
+** cmake ..
+3 - Compile using make
+** make
+4 - Run:
+** ./start -m [option]
