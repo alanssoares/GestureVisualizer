@@ -106,8 +106,8 @@ typedef struct FeatureDescriptor {
 #define DPR_HIGH_QUALITY false //Flag for high quality for simplify
 /* ========= End Douglas-Peucker Radial ========= */
 #define GESTURE "gesture"
-#define NAME_FILE_DATA "../../Datasets/msr_action_3d/msr_3d_action_raw.txt"
-#define NAME_FILE_DATA_NORMALIZED "../../Datasets/msr_action_3d/msr_3d_action_origin_arc.txt"
+#define NAME_FILE_DATA "../datasets/msr_3d_action_raw.txt"
+#define NAME_FILE_DATA_NORMALIZED "../datasets/msr_3d_action_origin.txt"
 #define NAME_WINDOW_GR "GestureVisualizer"
 #define GAP_WINDOW      25
 #define GL_WIN_SIZE_X   1024 // 512 to gesture record
