@@ -15,11 +15,7 @@ View and apply methods on gestures
 
 ## Compile and run (OSX and Linux)
 
-1 - Create the build dir:
-** mkdir build
-2 - Enter inside the build and run:
-** cmake ..
-3 - Compile using make
-** make
-4 - Run:
-** ./start -m [option]
+- Create the build dir: *mkdir build*
+- Enter inside the build and run: *cmake ..*
+- Compile using make: *make*
+- Run: *./start -m [option]*
