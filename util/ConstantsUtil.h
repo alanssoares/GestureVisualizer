@@ -12,9 +12,18 @@
 
 #include <iostream>
 #include <vector>
-#include <XnCppWrapper.h>
 
 using namespace std;
+
+typedef struct Point3D {
+    double X;
+    double Y;
+    double Z;
+    double curvature;
+    double r;
+    double g;
+    double b;
+} Point3D;
 
 // Enum colors opengl
 enum COLOR {
@@ -43,8 +52,8 @@ enum STATE_GESTURE {
 typedef struct type_hand {
     int id_hand;
     int side_hand;
-    vector<XnPoint3D> positions;
-    XnPoint3D centroid;
+    vector<Point3D> positions;
+    Point3D centroid;
 } type_hand;
 
 typedef struct type_gesture {

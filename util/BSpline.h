@@ -3,8 +3,8 @@
 
 #include <string>
 #include <cmath>
-#include <XnCppWrapper.h>
 #include <vector>
+#include "ConstantsUtil.h"
 
 #define DELTA_T     1.0  /* time step factor for drawing each curve */
 
@@ -26,7 +26,7 @@ public:
     @param points of control
     @param steps
     */
-    static std::vector<XnPoint3D> curvePoints(std::vector<XnPoint3D> points, int steps);
+    static std::vector<Point3D> curvePoints(std::vector<Point3D> points, int steps);
 
     /*
     Evaluate an ith point on the B spline
@@ -34,7 +34,7 @@ public:
     @param t
     @param points
     */
-    static XnPoint3D predictPoint(int i, double t, std::vector<XnPoint3D> points);
+    static Point3D predictPoint(int i, double t, std::vector<Point3D> points);
 
     /*
       This function evaluates the uniform cubic B-spline.
@@ -44,7 +44,7 @@ public:
     /* This function approximates the data with spline curves.
       https://www.it.uu.se/edu/course/homepage/grafik1/ht07/examples/curves.cpp
     */
-    static std::vector<XnPoint3D> uniformFitting(std::vector<XnPoint3D> points);
+    static std::vector<Point3D> uniformFitting(std::vector<Point3D> points);
 
 };
 

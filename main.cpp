@@ -13,14 +13,16 @@
 #include "util/Util.h"
 #include "util/FileUtil.h"
 
-std::vector<type_gesture> m_AllGestures;
+using pcl::PointCloud;
+using pcl::PointXYZ;
+
 Util g_Util;
+std::vector<type_gesture> m_AllGestures;
 std::vector<type_gesture> g_Gestures;
 std::vector<pcl::PointXYZRGB> g_PointsNormalA, g_PointsNormalB, g_PointsProcessedA, g_PointsProcessedB;
-int g_IdView1(0), g_IdView2(0), g_np = 1, id_Gesture = 0, g_Methods = 1;
 std::string g_IdCloudA = "cloudA", g_IdCloudB = "cloudB", g_NameMethodCombination;
-bool isEqualSize = false, isEditSamples = false, isViewMedian = false;
 std::vector<pcl::visualization::Camera> g_Cam;
+int g_IdView1(0), g_IdView2(0), g_np = 1, id_Gesture = 0, g_Methods = 1;
 
 void loadAll(){
 	FileUtil& futil = FileUtil::getInstance();
@@ -32,7 +34,7 @@ void loadAll(){
 	std::sort(m_AllGestures.begin(), m_AllGestures.end(), MathUtil::sortByName);
 }
 
-std::vector<pcl::PointXYZRGB> converterToPointXYZ(std::vector<XnPoint3D> points){
+std::vector<pcl::PointXYZRGB> converterToPointXYZ(std::vector<Point3D> points){
   std::vector<pcl::PointXYZRGB> pointsConverted;
   pcl::PointXYZRGB newPoint;
   size_t n = points.size();
@@ -50,20 +52,19 @@ void clearAllVectores(){
   g_PointsNormalB.clear();
   g_PointsProcessedA.clear();
   g_PointsProcessedB.clear();
-  if(!isEditSamples){
-    g_Gestures.clear();
-  }
 }
 
 void removeAll(pcl::visualization::PCLVisualizer *viewer){
+	viewer->removeAllShapes(0);
+	viewer->removeAllShapes(1);
   viewer->removeAllShapes(g_IdView1);
   viewer->removeAllShapes(g_IdView2);
   viewer->removePointCloud(g_IdCloudA, g_IdView1);
   viewer->removePointCloud(g_IdCloudB, g_IdView2);
 }
 
-XnPoint3D converterToXnPoint3D(pcl::PointXYZRGB point){
-    XnPoint3D newPoint;
+Point3D converterToPoint3D(pcl::PointXYZRGB point){
+    Point3D newPoint;
     newPoint.X = point.x;
     newPoint.Y = point.y;
     newPoint.Z = point.z;
@@ -71,7 +72,7 @@ XnPoint3D converterToXnPoint3D(pcl::PointXYZRGB point){
 }
 
 float calcCurvature(pcl::PointXYZRGB a, pcl::PointXYZRGB b, pcl::PointXYZRGB c){
-    return MathUtil::calcCurvature(converterToXnPoint3D(a), converterToXnPoint3D(b), converterToXnPoint3D(c));
+    return MathUtil::calcCurvature(converterToPoint3D(a), converterToPoint3D(b), converterToPoint3D(c));
 }
 
 void improveCurrentGesture(){
@@ -120,8 +121,8 @@ void improveCurrentGesture(){
     g_PointsProcessedB = converterToPointXYZ(temp.handTwo.positions);
   } else {
     g_NameMethodCombination = "Normalized between -1 and 1";
-    XnPoint3D max = MathUtil::findMaxFromTwo(g_Gestures[id_Gesture].handOne.positions, g_Gestures[id_Gesture].handTwo.positions);
-    XnPoint3D min = MathUtil::findMinFromTwo(g_Gestures[id_Gesture].handOne.positions, g_Gestures[id_Gesture].handTwo.positions);
+    Point3D max = MathUtil::findMaxFromTwo(g_Gestures[id_Gesture].handOne.positions, g_Gestures[id_Gesture].handTwo.positions);
+    Point3D min = MathUtil::findMinFromTwo(g_Gestures[id_Gesture].handOne.positions, g_Gestures[id_Gesture].handTwo.positions);
     g_PointsProcessedA = converterToPointXYZ(MathUtil::normalizeTrajectory(g_Gestures[id_Gesture].handOne.positions, min, max));
     g_PointsProcessedB = converterToPointXYZ(MathUtil::normalizeTrajectory(g_Gestures[id_Gesture].handTwo.positions, min, max));
   }
@@ -140,39 +141,51 @@ void viewLabels(pcl::visualization::PCLVisualizer *viewer){
 }
 
 void viewNormalGesture(pcl::visualization::PCLVisualizer *viewer){
-  pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloudA(new pcl::PointCloud<pcl::PointXYZRGB>);
+  // pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloudA(new pcl::PointCloud<pcl::PointXYZRGB>);
 
   size_t nA = g_PointsNormalA.size();
-  for (int i = 0; i < nA; i++){
-    cloudA->points.push_back(g_PointsNormalA[i]);
+  for (int i = 0; i < nA - 1; i++){
+    // cloudA->points.push_back(g_PointsNormalA[i]);
+		std::ostringstream os;
+		os << "line_normal_a_" << 1.0 << "_" << 0.0 << "_" << 0.0 << "_" << i;
+		viewer->addLine<pcl::PointXYZRGB>(g_PointsNormalA[i], g_PointsNormalA[i + 1], 1.0, 0.0, 0.0, os.str(), 0);
   }
 
   size_t nB = g_PointsNormalB.size();
-  for (int i = 0; i < nB; i++){
-    cloudA->points.push_back(g_PointsNormalB[i]);
+  for (int i = 0; i < nB - 1; i++){
+    // cloudA->points.push_back(g_PointsNormalB[i]);
+		std::ostringstream os;
+		os << "line_normal_b_" << 1.0 << "_" << 0.0 << "_" << 0.0 << "_" << i;
+		viewer->addLine<pcl::PointXYZRGB>(g_PointsNormalB[i], g_PointsNormalB[i + 1], 1.0, 0.0, 0.0, os.str(), 0);
   }
 
-  viewer->addPointCloud<pcl::PointXYZRGB> (cloudA, g_IdCloudA, g_IdView1);
-  viewer->setPointCloudRenderingProperties (pcl::visualization::PCL_VISUALIZER_POINT_SIZE, 2, g_IdCloudA);
-  viewer->setPointCloudRenderingProperties (pcl::visualization::PCL_VISUALIZER_COLOR, 0.0f, 0.0f, 1.0f, g_IdCloudA);
+  // viewer->addPointCloud<pcl::PointXYZRGB> (cloudA, g_IdCloudA, g_IdView1);
+  // viewer->setPointCloudRenderingProperties (pcl::visualization::PCL_VISUALIZER_POINT_SIZE, 2, g_IdCloudA);
+  // viewer->setPointCloudRenderingProperties (pcl::visualization::PCL_VISUALIZER_COLOR, 0.0f, 0.0f, 1.0f, g_IdCloudA);
 }
 
 void viewProcessedGesture(pcl::visualization::PCLVisualizer *viewer){
-  pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloudB(new pcl::PointCloud<pcl::PointXYZRGB>);
+  // pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloudB(new pcl::PointCloud<pcl::PointXYZRGB>);
 
   size_t nA = g_PointsProcessedA.size();
-  for (int i = 0; i < nA; i++){
-    cloudB->points.push_back(g_PointsProcessedA[i]);
+  for (int i = 0; i < nA - 1; i++){
+    // cloudB->points.push_back(g_PointsProcessedA[i]);
+		std::ostringstream os;
+		os << "line_pros_a_" << 0.0 << "_" << 0.0 << "_" << 1.0 << "_" << i;
+		viewer->addLine<pcl::PointXYZRGB>(g_PointsProcessedA[i], g_PointsProcessedA[i + 1], 0.0, 0.0, 1.0, os.str(), 1);
   }
 
   size_t nB = g_PointsProcessedB.size();
-  for (int i = 0; i < nB; i++){
-    cloudB->points.push_back(g_PointsProcessedB[i]);
+  for (int i = 0; i < nB - 1; i++){
+    // cloudB->points.push_back(g_PointsProcessedB[i]);
+		std::ostringstream os;
+		os << "line_pros_b_" << 0.0 << "_" << 0.0 << "_" << 1.0 << "_" << i;
+		viewer->addLine<pcl::PointXYZRGB>(g_PointsProcessedB[i], g_PointsProcessedB[i + 1], 0.0, 0.0, 1.0, os.str(), 1);
   }
 
-  viewer->addPointCloud<pcl::PointXYZRGB> (cloudB, g_IdCloudB, g_IdView2);
-  viewer->setPointCloudRenderingProperties (pcl::visualization::PCL_VISUALIZER_POINT_SIZE, 2, g_IdCloudB);
-  viewer->setPointCloudRenderingProperties (pcl::visualization::PCL_VISUALIZER_COLOR, 1.0f, 0.0f, 0.0f, g_IdCloudB);
+  // viewer->addPointCloud<pcl::PointXYZRGB> (cloudB, g_IdCloudB, g_IdView2);
+  // viewer->setPointCloudRenderingProperties (pcl::visualization::PCL_VISUALIZER_POINT_SIZE, 2, g_IdCloudB);
+  // viewer->setPointCloudRenderingProperties (pcl::visualization::PCL_VISUALIZER_COLOR, 1.0f, 0.0f, 0.0f, g_IdCloudB);
 }
 
 void viewShapes(pcl::visualization::PCLVisualizer *viewer){

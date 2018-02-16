@@ -44,9 +44,9 @@ BSpline::baseFunctionUniform(double t){
    return 0.0;
 }
 
-std::vector<XnPoint3D>
-BSpline::curvePoints(std::vector<XnPoint3D> points, int steps){
-	 std::vector<XnPoint3D> curve;
+std::vector<Point3D>
+BSpline::curvePoints(std::vector<Point3D> points, int steps){
+	 std::vector<Point3D> curve;
    int numPts = points.size() - 1;
    int pts = numPts * steps + 1;
    curve.push_back(predictPoint(2, 0, points));
@@ -58,12 +58,12 @@ BSpline::curvePoints(std::vector<XnPoint3D> points, int steps){
    return curve;
 }
 
-std::vector<XnPoint3D>
-BSpline::uniformFitting(std::vector<XnPoint3D> points){
+std::vector<Point3D>
+BSpline::uniformFitting(std::vector<Point3D> points){
   size_t n = points.size();
   double bt1, bt2, bt3, bt4;
-  std::vector<XnPoint3D> curve;
-  XnPoint3D newPoint;
+  std::vector<Point3D> curve;
+  Point3D newPoint;
 
   /* Make the two endpoints multiple so that they are interpolated. */
   points.insert(points.begin(), points.front());
@@ -87,9 +87,9 @@ BSpline::uniformFitting(std::vector<XnPoint3D> points){
    return curve;
 }
 
-XnPoint3D
-BSpline::predictPoint(int i, double t, std::vector<XnPoint3D> points){
-    XnPoint3D point;
+Point3D
+BSpline::predictPoint(int i, double t, std::vector<Point3D> points){
+    Point3D point;
     point.X = 0; point.Y = 0; point.Z = 0;
     for (int j = -2; j <= 1; j++) {
         point.X += points[i + j].X * baseFunction(j, t);

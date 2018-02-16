@@ -23,7 +23,7 @@ Util::applyUniformByArcLength(std::vector<type_gesture> *gestures, double factor
 
 void
 Util::applyNormalization(type_gesture* gesture){
-	XnPoint3D min, max;
+	Point3D min, max;
 	max = MathUtil::findMaxFromTwo(gesture->handOne.positions, gesture->handTwo.positions);
 	min = MathUtil::findMinFromTwo(gesture->handOne.positions, gesture->handTwo.positions);
 	gesture->handOne.positions = MathUtil::normalizeTrajectory(gesture->handOne.positions, min, max);

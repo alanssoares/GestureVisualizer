@@ -14,7 +14,6 @@
 #include <fstream>
 #include <sstream>
 #include <vector>
-#include <XnCppWrapper.h>
 #include "ConstantsUtil.h"
 #include "MathUtil.h"
 
@@ -55,19 +54,19 @@ public:
     void extractGesture(std::vector<std::string> rows);
 
     /**
-     Return the XnPoint3D from a std::string with the x,y,z positions
+     Return the Point3D from a std::string with the x,y,z positions
      @param std::string
-     @return XnPoint3D
+     @return Point3D
     */
-    XnPoint3D getPointFile(std::string str);
+    Point3D getPointFile(std::string str);
 
     /**
-     Return the XnPoint3D from a std::string with the x,y,z positions
+     Return the Point3D from a std::string with the x,y,z positions
      @param std::string
      @param int column initial
-     @return XnPoint3D
+     @return Point3D
     */
-    XnPoint3D getPointFile(const std::string str, const int i);
+    Point3D getPointFile(const std::string str, const int i);
 
     /**
      Return the template gestures of one hand

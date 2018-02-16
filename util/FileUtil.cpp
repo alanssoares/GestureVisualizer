@@ -35,10 +35,10 @@ FileUtil::split(const std::string &s, char delim, std::vector<std::string> &elem
     return elems;
 }
 
-XnPoint3D
+Point3D
 FileUtil::getPointFile(const std::string str){
     std::vector<std::string> coordinates;
-    XnPoint3D newPoint;
+    Point3D newPoint;
     split(str, ' ', coordinates);
     newPoint.X = atof(coordinates[0].c_str());
     newPoint.Y = atof(coordinates[1].c_str());
@@ -46,10 +46,10 @@ FileUtil::getPointFile(const std::string str){
     return newPoint;
 }
 
-XnPoint3D
+Point3D
 FileUtil::getPointFile(const std::string str, const int i){
     std::vector<std::string> coordinates;
-    XnPoint3D newPoint;
+    Point3D newPoint;
     split(str, ' ', coordinates);
     newPoint.X = atof(coordinates[i].c_str());
     newPoint.Y = atof(coordinates[i + 1].c_str());
