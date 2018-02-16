@@ -7,10 +7,6 @@ View and apply methods on gestures
 
 - Python 2.6+/3.x
 
-- Nite v1.5.2.21
-
-- OpenNI v1.5.7.10
-
 - PCL 1.8
 
 ## Compile and run (OSX and Linux)
