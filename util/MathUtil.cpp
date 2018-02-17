@@ -298,7 +298,7 @@ MathUtil::reduceByCurvature(std::vector<Point3D> points, double threshold){
 
     newPoints.push_back(points.front());
 
-    for (int i = 0; i < n - 2; i+=2){
+    for (int i = 0; i < n - 2; i++){
         curvature = calcCurvature(points[i], points[i + 1], points[i + 2]);
         if(curvature > threshold){
             newPoints.push_back(points[i + 1]);

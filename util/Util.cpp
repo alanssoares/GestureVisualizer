@@ -1,8 +1,8 @@
 #include "Util.h"
 
 Util::Util(){
-	m_CurvThreshold = 0.001;
-	m_DougThreshold = 0.01;
+	m_CurvThreshold = 0.005;
+	m_DougThreshold = 0.005;
 }
 
 Util::~Util(){}

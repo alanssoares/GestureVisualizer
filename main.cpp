@@ -23,6 +23,7 @@ std::vector<pcl::PointXYZRGB> g_PointsNormalA, g_PointsNormalB, g_PointsProcesse
 std::string g_IdCloudA = "cloudA", g_IdCloudB = "cloudB", g_NameMethodCombination;
 std::vector<pcl::visualization::Camera> g_Cam;
 int g_IdView1(0), g_IdView2(0), g_np = 1, id_Gesture = 0, g_Methods = 1;
+double g_curvature_threshold = g_Util.m_CurvThreshold;
 
 void loadAll(){
 	FileUtil& futil = FileUtil::getInstance();
@@ -55,8 +56,6 @@ void clearAllVectores(){
 }
 
 void removeAll(pcl::visualization::PCLVisualizer *viewer){
-	viewer->removeAllShapes(0);
-	viewer->removeAllShapes(1);
   viewer->removeAllShapes(g_IdView1);
   viewer->removeAllShapes(g_IdView2);
   viewer->removePointCloud(g_IdCloudA, g_IdView1);
@@ -90,36 +89,45 @@ void improveCurrentGesture(){
     g_PointsProcessedB = converterToPointXYZ(MathUtil::simplify(BSpline::uniformFitting(g_Gestures[id_Gesture].handTwo.positions), g_Util.m_DougThreshold, false));
   } else if(g_Methods == 3) {
     g_NameMethodCombination = "Laplacian + Curvature";
-    g_PointsProcessedA = converterToPointXYZ(MathUtil::reduceByCurvature(MathUtil::smoothMeanNeighboring(g_Gestures[id_Gesture].handOne.positions), g_Util.m_CurvThreshold));
-    g_PointsProcessedB = converterToPointXYZ(MathUtil::reduceByCurvature(MathUtil::smoothMeanNeighboring(g_Gestures[id_Gesture].handTwo.positions), g_Util.m_CurvThreshold));
+    g_PointsProcessedA = converterToPointXYZ(MathUtil::reduceByCurvature(MathUtil::smoothMeanNeighboring(g_Gestures[id_Gesture].handOne.positions), g_curvature_threshold));
+    g_PointsProcessedB = converterToPointXYZ(MathUtil::reduceByCurvature(MathUtil::smoothMeanNeighboring(g_Gestures[id_Gesture].handTwo.positions), g_curvature_threshold));
   } else if(g_Methods == 4) {
     g_NameMethodCombination = "B-Spline + Curvature";
-    g_PointsProcessedA = converterToPointXYZ(MathUtil::reduceByCurvature(BSpline::uniformFitting(g_Gestures[id_Gesture].handOne.positions), g_Util.m_CurvThreshold));
-    g_PointsProcessedB = converterToPointXYZ(MathUtil::reduceByCurvature(BSpline::uniformFitting(g_Gestures[id_Gesture].handTwo.positions), g_Util.m_CurvThreshold));
+		BSpline splineA, splineB;
+		splineA.setPoints(g_Gestures[id_Gesture].handOne.positions);
+		splineB.setPoints(g_Gestures[id_Gesture].handTwo.positions);
+		std::vector<Point3D> ptsA, ptsB;
+		for (double i = 0; i <= 1; i += 0.01) {
+			ptsA.push_back(splineA.calcAt(i, 3));
+			ptsB.push_back(splineB.calcAt(i, 3));
+		}
+    g_PointsProcessedA = converterToPointXYZ(MathUtil::reduceByCurvature(ptsA, g_curvature_threshold));
+    g_PointsProcessedB = converterToPointXYZ(MathUtil::reduceByCurvature(ptsB, g_curvature_threshold));
   } else if(g_Methods == 5) {
     g_NameMethodCombination = "DouglasPeucker";
     g_PointsProcessedA = converterToPointXYZ(MathUtil::simplify(g_Gestures[id_Gesture].handOne.positions, g_Util.m_DougThreshold, false));
     g_PointsProcessedB = converterToPointXYZ(MathUtil::simplify(g_Gestures[id_Gesture].handTwo.positions, g_Util.m_DougThreshold, false));
   } else if(g_Methods == 6) {
     g_NameMethodCombination = "Curvature";
-    g_PointsProcessedA = converterToPointXYZ(MathUtil::reduceByCurvature(g_Gestures[id_Gesture].handOne.positions, g_Util.m_CurvThreshold));
-    g_PointsProcessedB = converterToPointXYZ(MathUtil::reduceByCurvature(g_Gestures[id_Gesture].handTwo.positions, g_Util.m_CurvThreshold));
+    g_PointsProcessedA = converterToPointXYZ(MathUtil::reduceByCurvature(g_Gestures[id_Gesture].handOne.positions, g_curvature_threshold));
+    g_PointsProcessedB = converterToPointXYZ(MathUtil::reduceByCurvature(g_Gestures[id_Gesture].handTwo.positions, g_curvature_threshold));
   } else if(g_Methods == 7) {
     g_NameMethodCombination = "B-Spline";
-    g_PointsProcessedA = converterToPointXYZ(BSpline::uniformFitting(g_Gestures[id_Gesture].handOne.positions));
-    g_PointsProcessedB = converterToPointXYZ(BSpline::uniformFitting(g_Gestures[id_Gesture].handTwo.positions));
+		BSpline splineA, splineB;
+		splineA.setPoints(g_Gestures[id_Gesture].handOne.positions);
+		splineB.setPoints(g_Gestures[id_Gesture].handTwo.positions);
+		std::vector<Point3D> ptsA, ptsB;
+		for (double i = 0; i <= 1; i += 0.01) {
+			ptsA.push_back(splineA.calcAt(i, 3));
+			ptsB.push_back(splineB.calcAt(i, 3));
+		}
+		g_PointsProcessedA = converterToPointXYZ(ptsA);
+		g_PointsProcessedB = converterToPointXYZ(ptsB);
   } else if(g_Methods == 8) {
     g_NameMethodCombination = "Laplacian";
     g_PointsProcessedA = converterToPointXYZ(MathUtil::smoothMeanNeighboring(g_Gestures[id_Gesture].handOne.positions));
     g_PointsProcessedB = converterToPointXYZ(MathUtil::smoothMeanNeighboring(g_Gestures[id_Gesture].handTwo.positions));
-  } else if(g_Methods == 9) {
-    g_NameMethodCombination = "Equidistant using ArcLength";
-    type_gesture temp = g_Gestures[id_Gesture];
-    MathUtil::uniformCurveByArcLength(&temp.handOne.positions, 0.1);
-    MathUtil::uniformCurveByArcLength(&temp.handTwo.positions, 0.1);
-    g_PointsProcessedA = converterToPointXYZ(temp.handOne.positions);
-    g_PointsProcessedB = converterToPointXYZ(temp.handTwo.positions);
-  } else {
+  } else if (g_Methods == 9) {
     g_NameMethodCombination = "Normalized between -1 and 1";
     Point3D max = MathUtil::findMaxFromTwo(g_Gestures[id_Gesture].handOne.positions, g_Gestures[id_Gesture].handTwo.positions);
     Point3D min = MathUtil::findMinFromTwo(g_Gestures[id_Gesture].handOne.positions, g_Gestures[id_Gesture].handTwo.positions);
@@ -129,63 +137,78 @@ void improveCurrentGesture(){
  }
 
 void viewLabels(pcl::visualization::PCLVisualizer *viewer){
-  viewer->addText("Nº Points: " + MathUtil::intToString(g_PointsNormalA.size()), 10, 10, "v1 text", g_IdView1);
-  viewer->addText("Nº Total: " + MathUtil::intToString(g_Gestures.size()), 10, 20, "v2 text", g_IdView1);
-  viewer->addText("Name : " + g_Gestures[id_Gesture].name, 10, 30, "v3 text", g_IdView1);
-  viewer->addText("Id : " + MathUtil::intToString(id_Gesture), 10, 40, "v4 text", g_IdView1);
+	int x = 10, y = 10;
 
-  viewer->addText("Nº Points: " + MathUtil::intToString(g_PointsProcessedA.size()), 10, 10, "v5 text", g_IdView2);
-  viewer->addText("Threshold Curvature: " + MathUtil::floatToString(g_Util.m_CurvThreshold), 10, 20, "v6 text", g_IdView2);
-  viewer->addText("Threshold DouglasPeucker: " + MathUtil::floatToString(g_Util.m_DougThreshold), 10, 30, "v7 text", g_IdView2);
-  viewer->addText("Method: " + g_NameMethodCombination, 10, 40, "v8 text", g_IdView2);
+	viewer->addText("Name : " + g_Gestures[id_Gesture].name, x, y + 10, "v1 text", g_IdView1);
+	viewer->addText("Name : " + g_Gestures[id_Gesture].name, x, y + 10, "v2 text", g_IdView2);
+  viewer->addText("Nº Points: " + MathUtil::intToString(g_PointsNormalA.size()), x, y, "v3 text", g_IdView1);
+	viewer->addText("Nº Points: " + MathUtil::intToString(g_PointsProcessedA.size()), x, y, "v4 text", g_IdView2);
+
+	if (g_Methods == 3 || g_Methods == 4 || g_Methods == 6) {
+		viewer->addText("Threshold Curvature: " + MathUtil::floatToString(g_curvature_threshold), x, y + 20, "v5 text", g_IdView2);
+		viewer->addText("Method: " + g_NameMethodCombination, x, y + 30, "v6 text", g_IdView2);
+	} else if (g_Methods == 1 || g_Methods == 2 || g_Methods == 5) {
+		viewer->addText("Threshold DouglasPeucker: " + MathUtil::floatToString(g_Util.m_DougThreshold), x, y + 20, "v7 text", g_IdView2);
+		viewer->addText("Method: " + g_NameMethodCombination, x, y + 30, "v8 text", g_IdView2);
+	} else {
+		viewer->addText("Method: " + g_NameMethodCombination, x, y + 20, "v9 text", g_IdView2);
+	}
 }
 
 void viewNormalGesture(pcl::visualization::PCLVisualizer *viewer){
-  // pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloudA(new pcl::PointCloud<pcl::PointXYZRGB>);
-
   size_t nA = g_PointsNormalA.size();
-  for (int i = 0; i < nA - 1; i++){
-    // cloudA->points.push_back(g_PointsNormalA[i]);
+	Point3D color;
+	color.r = 1.0; color.g = 0.0; color.b = 0.0;
+  for (int i = 0; i < nA - 1; i ++){
 		std::ostringstream os;
-		os << "line_normal_a_" << 1.0 << "_" << 0.0 << "_" << 0.0 << "_" << i;
-		viewer->addLine<pcl::PointXYZRGB>(g_PointsNormalA[i], g_PointsNormalA[i + 1], 1.0, 0.0, 0.0, os.str(), 0);
+		os << "line_normal_a_" << color.r << "_" << color.g << "_" << color.b << "_" << i;
+		viewer->addLine<pcl::PointXYZRGB>(g_PointsNormalA[i], g_PointsNormalA[i + 1], color.r, color.g, color.b, os.str(), g_IdView1);
   }
-
   size_t nB = g_PointsNormalB.size();
   for (int i = 0; i < nB - 1; i++){
-    // cloudA->points.push_back(g_PointsNormalB[i]);
 		std::ostringstream os;
-		os << "line_normal_b_" << 1.0 << "_" << 0.0 << "_" << 0.0 << "_" << i;
-		viewer->addLine<pcl::PointXYZRGB>(g_PointsNormalB[i], g_PointsNormalB[i + 1], 1.0, 0.0, 0.0, os.str(), 0);
+		os << "line_normal_b_" << color.r << "_" << color.g << "_" << color.b << "_" << i;
+		viewer->addLine<pcl::PointXYZRGB>(g_PointsNormalB[i], g_PointsNormalB[i + 1], color.r, color.g, color.b, os.str(), g_IdView1);
   }
-
-  // viewer->addPointCloud<pcl::PointXYZRGB> (cloudA, g_IdCloudA, g_IdView1);
-  // viewer->setPointCloudRenderingProperties (pcl::visualization::PCL_VISUALIZER_POINT_SIZE, 2, g_IdCloudA);
-  // viewer->setPointCloudRenderingProperties (pcl::visualization::PCL_VISUALIZER_COLOR, 0.0f, 0.0f, 1.0f, g_IdCloudA);
 }
 
 void viewProcessedGesture(pcl::visualization::PCLVisualizer *viewer){
-  // pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloudB(new pcl::PointCloud<pcl::PointXYZRGB>);
-
   size_t nA = g_PointsProcessedA.size();
-  for (int i = 0; i < nA - 1; i++){
-    // cloudB->points.push_back(g_PointsProcessedA[i]);
+	Point3D color;
+	double curv = 0.0;
+  for (int i = 0; i < nA - 2; i += 2){
+		curv = MathUtil::calcCurvature(
+			converterToPoint3D(g_PointsProcessedA[i]),
+			converterToPoint3D(g_PointsProcessedA[i + 1]),
+			converterToPoint3D(g_PointsProcessedA[i + 2]));
+		if (curv < g_curvature_threshold) {
+			color.r = 0.0; color.g = 0.0; color.b = 1.0;
+		} else {
+			color.r = 0.0; color.g = 1.0; color.b = 0.0;
+		}
 		std::ostringstream os;
-		os << "line_pros_a_" << 0.0 << "_" << 0.0 << "_" << 1.0 << "_" << i;
-		viewer->addLine<pcl::PointXYZRGB>(g_PointsProcessedA[i], g_PointsProcessedA[i + 1], 0.0, 0.0, 1.0, os.str(), 1);
+		os << "line_pros_a_" << color.r << "_" << color.g << "_" << color.b << "_" << i;
+		viewer->addLine<pcl::PointXYZRGB>(g_PointsProcessedA[i], g_PointsProcessedA[i + 1], color.r, color.g, color.b, os.str(), g_IdView2);
+		os << "line_pros_a_" << color.r << "_" << color.g << "_" << color.b << "_" << i;
+		viewer->addLine<pcl::PointXYZRGB>(g_PointsProcessedA[i + 1], g_PointsProcessedA[i + 2], color.r, color.g, color.b, os.str(), g_IdView2);
   }
-
   size_t nB = g_PointsProcessedB.size();
-  for (int i = 0; i < nB - 1; i++){
-    // cloudB->points.push_back(g_PointsProcessedB[i]);
+  for (int i = 0; i < nB - 2; i += 2){
+		curv = MathUtil::calcCurvature(
+			converterToPoint3D(g_PointsProcessedB[i]),
+			converterToPoint3D(g_PointsProcessedB[i + 1]),
+			converterToPoint3D(g_PointsProcessedB[i + 2]));
+			if (curv < g_curvature_threshold) {
+				color.r = 0.0; color.g = 0.0; color.b = 1.0;
+			} else {
+				color.r = 0.0; color.g = 1.0; color.b = 0.0;
+			}
 		std::ostringstream os;
-		os << "line_pros_b_" << 0.0 << "_" << 0.0 << "_" << 1.0 << "_" << i;
-		viewer->addLine<pcl::PointXYZRGB>(g_PointsProcessedB[i], g_PointsProcessedB[i + 1], 0.0, 0.0, 1.0, os.str(), 1);
+		os << "line_pros_b_" << color.r << "_" << color.g << "_" << color.b << "_" << i;
+		viewer->addLine<pcl::PointXYZRGB>(g_PointsProcessedB[i], g_PointsProcessedB[i + 1], color.r, color.g, color.b, os.str(), g_IdView2);
+		os << "line_pros_b_" << i;
+		viewer->addLine<pcl::PointXYZRGB>(g_PointsProcessedB[i + 1], g_PointsProcessedB[i + 2], color.r, color.g, color.b, os.str(), g_IdView2);
   }
-
-  // viewer->addPointCloud<pcl::PointXYZRGB> (cloudB, g_IdCloudB, g_IdView2);
-  // viewer->setPointCloudRenderingProperties (pcl::visualization::PCL_VISUALIZER_POINT_SIZE, 2, g_IdCloudB);
-  // viewer->setPointCloudRenderingProperties (pcl::visualization::PCL_VISUALIZER_COLOR, 1.0f, 0.0f, 0.0f, g_IdCloudB);
 }
 
 void viewShapes(pcl::visualization::PCLVisualizer *viewer){
@@ -212,10 +235,10 @@ void keyboardEventOccurred (const pcl::visualization::KeyboardEvent &event, void
   if(event.keyDown()){
     size_t n = g_Gestures.size() - 1;
     if(event.getKeySym() == "t"){
-        g_Util.m_CurvThreshold += 0.0001;
+        g_curvature_threshold += g_Util.m_CurvThreshold;
         g_Util.m_DougThreshold += 0.01;
     } else if(event.getKeySym() == "y"){
-        if(g_Util.m_CurvThreshold > 0.0001) g_Util.m_CurvThreshold -= 0.0001;
+        if(g_curvature_threshold > g_Util.m_CurvThreshold) g_curvature_threshold -= g_Util.m_CurvThreshold;
         if(g_Util.m_DougThreshold > 0.01) g_Util.m_DougThreshold -= 0.01;
     } else if(event.getKeySym() == "n" && id_Gesture > 0){
         id_Gesture -= 1;

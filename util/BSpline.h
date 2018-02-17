@@ -8,11 +8,26 @@
 
 #define DELTA_T     1.0  /* time step factor for drawing each curve */
 
+using namespace std;
+
 class BSpline {
 
 public:
   	 BSpline(){};
     ~BSpline(){};
+
+    // -------- NEW IMPLEMENTATION ------
+    // https://github.com/Tagussan/BSpline/blob/master/BSpline.js
+    double seqAt(int i, int dim, int degree);
+    double basisDeg2(double x);
+    double basisDeg3(double x);
+    double basisDeg4(double x);
+    double basisDeg5(double x);
+    double getInterpol(int degree, int dim, double t);
+    Point3D calcAt(double t, double degree);
+    void setPoints(std::vector<Point3D> points) { m_Points = points; }
+    std::vector<Point3D> m_Points;
+    // ---------------------------------------------------------------
 
     /*
      Calc the basis function for a cubic B spline
