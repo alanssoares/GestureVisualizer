@@ -181,7 +181,9 @@ void viewProcessedGesture(pcl::visualization::PCLVisualizer *viewer){
 			converterToPoint3D(g_PointsProcessedA[i]),
 			converterToPoint3D(g_PointsProcessedA[i + 1]),
 			converterToPoint3D(g_PointsProcessedA[i + 2]));
-		if (curv < g_curvature_threshold) {
+		// std::cout << "C = " << curv << '\n';
+		if (curv <= 0) {
+		// if (curv < g_curvature_threshold) {
 			color.r = 0.0; color.g = 0.0; color.b = 1.0;
 		} else {
 			color.r = 0.0; color.g = 1.0; color.b = 0.0;
@@ -198,16 +200,18 @@ void viewProcessedGesture(pcl::visualization::PCLVisualizer *viewer){
 			converterToPoint3D(g_PointsProcessedB[i]),
 			converterToPoint3D(g_PointsProcessedB[i + 1]),
 			converterToPoint3D(g_PointsProcessedB[i + 2]));
-			if (curv < g_curvature_threshold) {
-				color.r = 0.0; color.g = 0.0; color.b = 1.0;
-			} else {
-				color.r = 0.0; color.g = 1.0; color.b = 0.0;
-			}
+		// std::cout << "C = " << curv << '\n';
+		if (curv <= 0) {
+		// if (curv < g_curvature_threshold) {
+			color.r = 0.0; color.g = 0.0; color.b = 1.0;
+		} else {
+			color.r = 0.0; color.g = 1.0; color.b = 0.0;
+		}
 		std::ostringstream os;
 		os << "line_pros_b_" << color.r << "_" << color.g << "_" << color.b << "_" << i;
 		viewer->addLine<pcl::PointXYZRGB>(g_PointsProcessedB[i], g_PointsProcessedB[i + 1], color.r, color.g, color.b, os.str(), g_IdView2);
-		os << "line_pros_b_" << i;
-		viewer->addLine<pcl::PointXYZRGB>(g_PointsProcessedB[i + 1], g_PointsProcessedB[i + 2], color.r, color.g, color.b, os.str(), g_IdView2);
+		// os << "line_pros_b_" << i;
+		// viewer->addLine<pcl::PointXYZRGB>(g_PointsProcessedB[i + 1], g_PointsProcessedB[i + 2], color.r, color.g, color.b, os.str(), g_IdView2);
   }
 }
 

@@ -265,6 +265,8 @@ public:
     */
     static float calcCurvature(Point3D a, Point3D b, Point3D c);
 
+    static float calcCurvature(Point3D p1, Point3D p2);
+    
     /**
      Smooth the trajectory according with the method choosed
      @param trajectory

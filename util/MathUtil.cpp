@@ -312,10 +312,24 @@ MathUtil::reduceByCurvature(std::vector<Point3D> points, double threshold){
 
 float
 MathUtil::calcCurvature(Point3D a, Point3D b, Point3D c){
-    Point3D l1, l2;
-    l1 = subtract(a, b);
-    l2 = subtract(b, c);
-    return length(subtract(l1, l2));
+    // Point3D l1, l2;
+    // l1 = subtract(a, b);
+    // l2 = subtract(b, c);
+    // return length(subtract(l1, l2));
+    float l1, l2;
+    l1 = length(subtract(a, b));
+    l2 = length(subtract(b, c));
+    return l2 - l1;
+}
+
+float
+MathUtil::calcCurvature(Point3D p1, Point3D p2) {
+  // https://computergraphics.stackexchange.com/questions/1718/what-is-the-simplest-way-to-compute-principal-curvature-for-a-mesh-triangle
+  double n1, n2, m, d;
+  n1 = length(p1);
+  n2 = length(p2);
+  m = length(subtract(p1, p2));
+  return (((n2 - n1) * m) / m);
 }
 
 double
