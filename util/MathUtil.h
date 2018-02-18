@@ -69,7 +69,7 @@ public:
      @param p2 ponto
      @return double distância entre os pontos
     **/
-    static double getArcLength(Point3D p1, Point3D p2);
+    static double calcEuclidianDist(Point3D p1, Point3D p2);
 
     /**
      Método responsável por efetuar a subtração de dois vetores a e b.
@@ -265,8 +265,15 @@ public:
     */
     static float calcCurvature(Point3D a, Point3D b, Point3D c);
 
+    /**
+     Método responsável por calcular a curvatura principal utilizando 2 pontos
+     https://computergraphics.stackexchange.com/questions/1718/what-is-the-simplest-way-to-compute-principal-curvature-for-a-mesh-triangle
+     @param b ponto i
+     @param c ponto i + 1
+     @return float com curvatura
+    */
     static float calcCurvature(Point3D p1, Point3D p2);
-    
+
     /**
      Smooth the trajectory according with the method choosed
      @param trajectory

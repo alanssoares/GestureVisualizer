@@ -1,5 +1,16 @@
 #include "BSpline.h"
 
+std::vector<Point3D>
+BSpline::compute(std::vector<Point3D> curve, int degree, double t) {
+  m_Points.clear();
+  std::vector<Point3D> v;
+  m_Points = curve;
+  for (double i = 0; i <= 1; i += t) {
+    v.push_back(calcAt(i, degree));
+  }
+  return v;
+}
+
 double
 BSpline::seqAt(int i, int dim, int degree) {
   int margin = degree + 1;

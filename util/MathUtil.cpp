@@ -240,7 +240,7 @@ MathUtil::simplifyRadialDist(std::vector<Point3D> points, double sqTolerance){
 
     for (int i = 1; i < n; i++) {
         point = points[i];
-        sqDistance = getArcLength(point, prevPoint);
+        sqDistance = calcEuclidianDist(point, prevPoint);
         if (sqDistance > sqTolerance) {
             newPoints.push_back(point);
             prevPoint = point;
@@ -312,10 +312,6 @@ MathUtil::reduceByCurvature(std::vector<Point3D> points, double threshold){
 
 float
 MathUtil::calcCurvature(Point3D a, Point3D b, Point3D c){
-    // Point3D l1, l2;
-    // l1 = subtract(a, b);
-    // l2 = subtract(b, c);
-    // return length(subtract(l1, l2));
     float l1, l2;
     l1 = length(subtract(a, b));
     l2 = length(subtract(b, c));
@@ -324,7 +320,6 @@ MathUtil::calcCurvature(Point3D a, Point3D b, Point3D c){
 
 float
 MathUtil::calcCurvature(Point3D p1, Point3D p2) {
-  // https://computergraphics.stackexchange.com/questions/1718/what-is-the-simplest-way-to-compute-principal-curvature-for-a-mesh-triangle
   double n1, n2, m, d;
   n1 = length(p1);
   n2 = length(p2);
@@ -340,7 +335,7 @@ MathUtil::calcSlope(Point3D p1, Point3D p2) {
 }
 
 double
-MathUtil::getArcLength(Point3D p1, Point3D p2){
+MathUtil::calcEuclidianDist(Point3D p1, Point3D p2){
     return length(subtract(p1, p2));
 }
 
@@ -468,7 +463,7 @@ MathUtil::uniformCurveByArcLength(std::vector<Point3D> *points, double dL){
   int i = 0;
   Point3D prev;
   while(i < n - 1) {
-    aL = getArcLength(points->at(i), points->at(i + 1));
+    aL = calcEuclidianDist(points->at(i), points->at(i + 1));
     if(aL < dL){
       points->erase(points->begin() + i + 1);
       n--;
@@ -476,7 +471,7 @@ MathUtil::uniformCurveByArcLength(std::vector<Point3D> *points, double dL){
     }
     while(aL > dL){
       prev = interpolate(points->at(i), points->at(i + 1), t);
-      aL = getArcLength(points->at(i), prev);
+      aL = calcEuclidianDist(points->at(i), prev);
       t -= 0.01;
     }
     points->at(i + 1) = prev;

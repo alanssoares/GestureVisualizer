@@ -26,6 +26,7 @@ public:
     double getInterpol(int degree, int dim, double t);
     Point3D calcAt(double t, double degree);
     void setPoints(std::vector<Point3D> points) { m_Points = points; }
+    std::vector<Point3D> compute(std::vector<Point3D> points, int degree, double t);
     std::vector<Point3D> m_Points;
     // ---------------------------------------------------------------
 

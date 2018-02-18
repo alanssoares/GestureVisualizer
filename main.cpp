@@ -93,16 +93,9 @@ void improveCurrentGesture(){
     g_PointsProcessedB = converterToPointXYZ(MathUtil::reduceByCurvature(MathUtil::smoothMeanNeighboring(g_Gestures[id_Gesture].handTwo.positions), g_curvature_threshold));
   } else if(g_Methods == 4) {
     g_NameMethodCombination = "B-Spline + Curvature";
-		BSpline splineA, splineB;
-		splineA.setPoints(g_Gestures[id_Gesture].handOne.positions);
-		splineB.setPoints(g_Gestures[id_Gesture].handTwo.positions);
-		std::vector<Point3D> ptsA, ptsB;
-		for (double i = 0; i <= 1; i += 0.01) {
-			ptsA.push_back(splineA.calcAt(i, 3));
-			ptsB.push_back(splineB.calcAt(i, 3));
-		}
-    g_PointsProcessedA = converterToPointXYZ(MathUtil::reduceByCurvature(ptsA, g_curvature_threshold));
-    g_PointsProcessedB = converterToPointXYZ(MathUtil::reduceByCurvature(ptsB, g_curvature_threshold));
+		BSpline spline;
+    g_PointsProcessedA = converterToPointXYZ(MathUtil::reduceByCurvature(spline.compute(g_Gestures[id_Gesture].handOne.positions, 3, 0.01), g_curvature_threshold));
+    g_PointsProcessedB = converterToPointXYZ(MathUtil::reduceByCurvature(spline.compute(g_Gestures[id_Gesture].handTwo.positions, 3, 0.01), g_curvature_threshold));
   } else if(g_Methods == 5) {
     g_NameMethodCombination = "DouglasPeucker";
     g_PointsProcessedA = converterToPointXYZ(MathUtil::simplify(g_Gestures[id_Gesture].handOne.positions, g_Util.m_DougThreshold, false));
@@ -113,16 +106,9 @@ void improveCurrentGesture(){
     g_PointsProcessedB = converterToPointXYZ(MathUtil::reduceByCurvature(g_Gestures[id_Gesture].handTwo.positions, g_curvature_threshold));
   } else if(g_Methods == 7) {
     g_NameMethodCombination = "B-Spline";
-		BSpline splineA, splineB;
-		splineA.setPoints(g_Gestures[id_Gesture].handOne.positions);
-		splineB.setPoints(g_Gestures[id_Gesture].handTwo.positions);
-		std::vector<Point3D> ptsA, ptsB;
-		for (double i = 0; i <= 1; i += 0.01) {
-			ptsA.push_back(splineA.calcAt(i, 3));
-			ptsB.push_back(splineB.calcAt(i, 3));
-		}
-		g_PointsProcessedA = converterToPointXYZ(ptsA);
-		g_PointsProcessedB = converterToPointXYZ(ptsB);
+		BSpline spline;
+		g_PointsProcessedA = converterToPointXYZ(spline.compute(g_Gestures[id_Gesture].handOne.positions, 3, 0.01));
+		g_PointsProcessedB = converterToPointXYZ(spline.compute(g_Gestures[id_Gesture].handTwo.positions, 3, 0.01));
   } else if(g_Methods == 8) {
     g_NameMethodCombination = "Laplacian";
     g_PointsProcessedA = converterToPointXYZ(MathUtil::smoothMeanNeighboring(g_Gestures[id_Gesture].handOne.positions));
