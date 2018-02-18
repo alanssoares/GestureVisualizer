@@ -311,6 +311,16 @@ MathUtil::reduceByCurvature(std::vector<Point3D> points, double threshold){
 }
 
 float
+MathUtil::calcCurvatureArea(Point3D a, Point3D b, Point3D c){
+    float s = (length(a) + length(b) + length(c)) / 2;
+    float area = sqrt(s * ( s - length(a)) * (s - length(b)) * (s - length(c)));
+    float len0 = length(subtract(a, b));
+    float len1 = length(subtract(b, c));
+    float len2 = length(subtract(a, c));
+    return 4 * area / (len0 * len1 * len2);
+}
+
+float
 MathUtil::calcCurvature(Point3D a, Point3D b, Point3D c){
     float l1, l2;
     l1 = length(subtract(a, b));
@@ -324,7 +334,9 @@ MathUtil::calcCurvature(Point3D p1, Point3D p2) {
   n1 = length(p1);
   n2 = length(p2);
   m = length(subtract(p1, p2));
-  return (((n2 - n1) * m) / m);
+  m = (((n2 - n1) * m) / m);
+  if (isnan(m)) return 0.0;
+  return m;
 }
 
 double

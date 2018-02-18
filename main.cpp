@@ -162,14 +162,13 @@ void viewProcessedGesture(pcl::visualization::PCLVisualizer *viewer){
   size_t nA = g_PointsProcessedA.size();
 	Point3D color;
 	double curv = 0.0;
-  for (int i = 0; i < nA - 2; i += 2){
+	std::cout << "T = " << g_curvature_threshold << '\n';
+  for (int i = 0; i < nA - 2; i+=2){
 		curv = MathUtil::calcCurvature(
 			converterToPoint3D(g_PointsProcessedA[i]),
 			converterToPoint3D(g_PointsProcessedA[i + 1]),
 			converterToPoint3D(g_PointsProcessedA[i + 2]));
-		// std::cout << "C = " << curv << '\n';
-		if (curv <= 0) {
-		// if (curv < g_curvature_threshold) {
+		if (abs(curv) < g_curvature_threshold) {
 			color.r = 0.0; color.g = 0.0; color.b = 1.0;
 		} else {
 			color.r = 0.0; color.g = 1.0; color.b = 0.0;
@@ -177,27 +176,25 @@ void viewProcessedGesture(pcl::visualization::PCLVisualizer *viewer){
 		std::ostringstream os;
 		os << "line_pros_a_" << color.r << "_" << color.g << "_" << color.b << "_" << i;
 		viewer->addLine<pcl::PointXYZRGB>(g_PointsProcessedA[i], g_PointsProcessedA[i + 1], color.r, color.g, color.b, os.str(), g_IdView2);
-		os << "line_pros_a_" << color.r << "_" << color.g << "_" << color.b << "_" << i;
+		os << "line_pros_a_" << i + 1;
 		viewer->addLine<pcl::PointXYZRGB>(g_PointsProcessedA[i + 1], g_PointsProcessedA[i + 2], color.r, color.g, color.b, os.str(), g_IdView2);
   }
   size_t nB = g_PointsProcessedB.size();
-  for (int i = 0; i < nB - 2; i += 2){
+  for (int i = 0; i < nB - 2; i+=2){
 		curv = MathUtil::calcCurvature(
 			converterToPoint3D(g_PointsProcessedB[i]),
 			converterToPoint3D(g_PointsProcessedB[i + 1]),
 			converterToPoint3D(g_PointsProcessedB[i + 2]));
-		// std::cout << "C = " << curv << '\n';
-		if (curv <= 0) {
-		// if (curv < g_curvature_threshold) {
-			color.r = 0.0; color.g = 0.0; color.b = 1.0;
-		} else {
-			color.r = 0.0; color.g = 1.0; color.b = 0.0;
-		}
+			if (abs(curv) < g_curvature_threshold) {
+				color.r = 0.0; color.g = 0.0; color.b = 1.0;
+			} else {
+				color.r = 0.0; color.g = 1.0; color.b = 0.0;
+			}
 		std::ostringstream os;
 		os << "line_pros_b_" << color.r << "_" << color.g << "_" << color.b << "_" << i;
 		viewer->addLine<pcl::PointXYZRGB>(g_PointsProcessedB[i], g_PointsProcessedB[i + 1], color.r, color.g, color.b, os.str(), g_IdView2);
-		// os << "line_pros_b_" << i;
-		// viewer->addLine<pcl::PointXYZRGB>(g_PointsProcessedB[i + 1], g_PointsProcessedB[i + 2], color.r, color.g, color.b, os.str(), g_IdView2);
+		os << "line_pros_b_" << i + 1;
+		viewer->addLine<pcl::PointXYZRGB>(g_PointsProcessedB[i + 1], g_PointsProcessedB[i + 2], color.r, color.g, color.b, os.str(), g_IdView2);
   }
 }
 

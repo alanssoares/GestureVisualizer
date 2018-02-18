@@ -258,6 +258,17 @@ public:
 
     /**
      Método responsável por calcular a curvatura utilizando 3 pontos
+     https://stackoverflow.com/questions/41144224/calculate-curvature-for-3-points-x-y
+     https://en.wikipedia.org/wiki/Heron%27s_formula
+     @param a ponto i - 1
+     @param b ponto i
+     @param c ponto i + 1
+     @return float com curvatura
+    */
+    static float calcCurvatureArea(Point3D a, Point3D b, Point3D c);
+
+    /**
+     Método responsável por calcular a curvatura utilizando 3 pontos
      @param a ponto i - 1
      @param b ponto i
      @param c ponto i + 1
