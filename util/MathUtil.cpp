@@ -316,7 +316,9 @@ MathUtil::calcCurvatureRadius(Point3D a, Point3D b, Point3D c) {
     float len0 = length(subtract(a, b));
     float len1 = length(subtract(b, c));
     float len2 = length(subtract(a, c));
-    return (sqrt(pow(len1+len2,2) - pow(len0,2)) * sqrt(pow(len0,2) - pow(len1-len2,2))) / len0 * len1 * len2;
+    float d = sqrt(pow(len1+len2,2) - pow(len0,2)) * sqrt(pow(len0,2) - pow(len1-len2,2));
+    // float l = len0 * len1 * len2;
+    return d / len0 * len1 * len2;
 }
 
 float

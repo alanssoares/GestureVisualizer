@@ -189,7 +189,7 @@ void viewNormalGesture(pcl::visualization::PCLVisualizer *viewer){
 void viewProcessedGesture(pcl::visualization::PCLVisualizer *viewer){
   size_t nA = g_PointsProcessedA.size();
 	Point3D color;
-	double curv = 0.0, minCurv = 99.9, maxCurv = 0.0, mean = 0.0;
+	double curv = 0.0, minCurv = 99.9, maxCurv = 0.0;
 	std::cout << "T = " << g_curvature_threshold << '\n';
 
 	std::vector<double> curvatures;
@@ -201,9 +201,9 @@ void viewProcessedGesture(pcl::visualization::PCLVisualizer *viewer){
 		curvatures.push_back(curv);
 		if (curv < minCurv) minCurv = curv;
 		if (curv > maxCurv) maxCurv = curv;
-		mean += curv;
 	}
 
+	// std::cout << "Min = " << minCurv << " Max = " << maxCurv << '\n';
 	for (int i = 1; i < nA - 1; i+=1){
 		color = getColour(curvatures[i], minCurv, maxCurv);
 		std::ostringstream os;
@@ -213,22 +213,27 @@ void viewProcessedGesture(pcl::visualization::PCLVisualizer *viewer){
 		viewer->addLine<pcl::PointXYZRGB>(g_PointsProcessedA[i], g_PointsProcessedA[i + 1], color.r, color.g, color.b, os.str(), g_IdView2);
   }
 
-  size_t nB = g_PointsProcessedB.size();
-  for (int i = 0; i < nB - 2; i+=2){
-		curv = MathUtil::calcCurvature(
+	size_t nB = g_PointsProcessedB.size();
+	curvatures.clear();
+	curv = 0.0; minCurv = 99.9; maxCurv = 0.0;
+  for (int i = 1; i < nB - 1; i+=1){
+		curv = MathUtil::calcCurvatureRadius(
+			converterToPoint3D(g_PointsProcessedB[i - 1]),
 			converterToPoint3D(g_PointsProcessedB[i]),
-			converterToPoint3D(g_PointsProcessedB[i + 1]),
-			converterToPoint3D(g_PointsProcessedB[i + 2]));
-			if (abs(curv) < g_curvature_threshold) {
-				color.r = 0.0; color.g = 0.0; color.b = 1.0;
-			} else {
-				color.r = 0.0; color.g = 1.0; color.b = 0.0;
-			}
+			converterToPoint3D(g_PointsProcessedB[i + 1]));
+		curvatures.push_back(curv);
+		if (curv < minCurv) minCurv = curv;
+		if (curv > maxCurv) maxCurv = curv;
+	}
+
+	// std::cout << "Min = " << minCurv << " Max = " << maxCurv << '\n';
+  for (int i = 1; i < nB - 1; i+=1){
+		color = getColour(curvatures[i], minCurv, maxCurv);
 		std::ostringstream os;
 		os << "line_pros_b_" << color.r << "_" << color.g << "_" << color.b << "_" << i;
-		viewer->addLine<pcl::PointXYZRGB>(g_PointsProcessedB[i], g_PointsProcessedB[i + 1], color.r, color.g, color.b, os.str(), g_IdView2);
+		viewer->addLine<pcl::PointXYZRGB>(g_PointsProcessedB[i - 1], g_PointsProcessedB[i], color.r, color.g, color.b, os.str(), g_IdView2);
 		os << "line_pros_b_" << i + 1;
-		viewer->addLine<pcl::PointXYZRGB>(g_PointsProcessedB[i + 1], g_PointsProcessedB[i + 2], color.r, color.g, color.b, os.str(), g_IdView2);
+		viewer->addLine<pcl::PointXYZRGB>(g_PointsProcessedB[i], g_PointsProcessedB[i + 1], color.r, color.g, color.b, os.str(), g_IdView2);
   }
 }
 
