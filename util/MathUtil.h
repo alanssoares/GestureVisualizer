@@ -276,6 +276,8 @@ public:
     */
     static float calcCurvature(Point3D a, Point3D b, Point3D c);
 
+    static float calcCurvatureRadius(Point3D a, Point3D b, Point3D c);
+
     /**
      Método responsável por calcular a curvatura principal utilizando 2 pontos
      https://computergraphics.stackexchange.com/questions/1718/what-is-the-simplest-way-to-compute-principal-curvature-for-a-mesh-triangle

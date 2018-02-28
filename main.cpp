@@ -25,6 +25,34 @@ std::vector<pcl::visualization::Camera> g_Cam;
 int g_IdView1(0), g_IdView2(0), g_np = 1, id_Gesture = 0, g_Methods = 1;
 double g_curvature_threshold = g_Util.m_CurvThreshold;
 
+Point3D getColour(double v, double vmin, double vmax) {
+   Point3D c;
+	 c.r = 1.0; c.g = 1.0; c.b = 1.0; // white
+   double dv;
+
+   if (v < vmin)
+      v = vmin;
+   if (v > vmax)
+      v = vmax;
+   dv = vmax - vmin;
+
+   if (v < (vmin + 0.25 * dv)) {
+      c.r = 0;
+      c.g = 4 * (v - vmin) / dv;
+   } else if (v < (vmin + 0.5 * dv)) {
+      c.r = 0;
+      c.b = 1 + 4 * (vmin + 0.25 * dv - v) / dv;
+   } else if (v < (vmin + 0.75 * dv)) {
+      c.r = 4 * (v - vmin - 0.5 * dv) / dv;
+      c.b = 0;
+   } else {
+      c.g = 1 + 4 * (vmin + 0.75 * dv - v) / dv;
+      c.b = 0;
+   }
+
+   return(c);
+}
+
 void loadAll(){
 	FileUtil& futil = FileUtil::getInstance();
 	futil.loadGestures(NAME_FILE_DATA_NORMALIZED);
@@ -161,24 +189,30 @@ void viewNormalGesture(pcl::visualization::PCLVisualizer *viewer){
 void viewProcessedGesture(pcl::visualization::PCLVisualizer *viewer){
   size_t nA = g_PointsProcessedA.size();
 	Point3D color;
-	double curv = 0.0;
+	double curv = 0.0, minCurv = 99.9, maxCurv = 0.0, mean = 0.0;
 	std::cout << "T = " << g_curvature_threshold << '\n';
-  for (int i = 0; i < nA - 2; i+=2){
-		curv = MathUtil::calcCurvature(
+
+	std::vector<double> curvatures;
+  for (int i = 1; i < nA - 1; i+=1){
+		curv = MathUtil::calcCurvatureRadius(
+			converterToPoint3D(g_PointsProcessedA[i - 1]),
 			converterToPoint3D(g_PointsProcessedA[i]),
-			converterToPoint3D(g_PointsProcessedA[i + 1]),
-			converterToPoint3D(g_PointsProcessedA[i + 2]));
-		if (abs(curv) < g_curvature_threshold) {
-			color.r = 0.0; color.g = 0.0; color.b = 1.0;
-		} else {
-			color.r = 0.0; color.g = 1.0; color.b = 0.0;
-		}
+			converterToPoint3D(g_PointsProcessedA[i + 1]));
+		curvatures.push_back(curv);
+		if (curv < minCurv) minCurv = curv;
+		if (curv > maxCurv) maxCurv = curv;
+		mean += curv;
+	}
+
+	for (int i = 1; i < nA - 1; i+=1){
+		color = getColour(curvatures[i], minCurv, maxCurv);
 		std::ostringstream os;
 		os << "line_pros_a_" << color.r << "_" << color.g << "_" << color.b << "_" << i;
-		viewer->addLine<pcl::PointXYZRGB>(g_PointsProcessedA[i], g_PointsProcessedA[i + 1], color.r, color.g, color.b, os.str(), g_IdView2);
+		viewer->addLine<pcl::PointXYZRGB>(g_PointsProcessedA[i - 1], g_PointsProcessedA[i], color.r, color.g, color.b, os.str(), g_IdView2);
 		os << "line_pros_a_" << i + 1;
-		viewer->addLine<pcl::PointXYZRGB>(g_PointsProcessedA[i + 1], g_PointsProcessedA[i + 2], color.r, color.g, color.b, os.str(), g_IdView2);
+		viewer->addLine<pcl::PointXYZRGB>(g_PointsProcessedA[i], g_PointsProcessedA[i + 1], color.r, color.g, color.b, os.str(), g_IdView2);
   }
+
   size_t nB = g_PointsProcessedB.size();
   for (int i = 0; i < nB - 2; i+=2){
 		curv = MathUtil::calcCurvature(
