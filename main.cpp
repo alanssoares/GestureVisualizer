@@ -194,13 +194,14 @@ void viewProcessedGesture(pcl::visualization::PCLVisualizer *viewer){
 
 	std::vector<double> curvatures;
   for (int i = 1; i < nA - 1; i+=1){
-		curv = MathUtil::calcCurvatureRadius(
+		curv = MathUtil::calcCurvature(
 			converterToPoint3D(g_PointsProcessedA[i - 1]),
 			converterToPoint3D(g_PointsProcessedA[i]),
 			converterToPoint3D(g_PointsProcessedA[i + 1]));
 		curvatures.push_back(curv);
 		if (curv < minCurv) minCurv = curv;
 		if (curv > maxCurv) maxCurv = curv;
+    // std::cout << "C = " << curv << '\n';
 	}
 
 	// std::cout << "Min = " << minCurv << " Max = " << maxCurv << '\n';
@@ -217,13 +218,14 @@ void viewProcessedGesture(pcl::visualization::PCLVisualizer *viewer){
 	curvatures.clear();
 	curv = 0.0; minCurv = 99.9; maxCurv = 0.0;
   for (int i = 1; i < nB - 1; i+=1){
-		curv = MathUtil::calcCurvatureRadius(
+		curv = MathUtil::calcCurvature(
 			converterToPoint3D(g_PointsProcessedB[i - 1]),
 			converterToPoint3D(g_PointsProcessedB[i]),
 			converterToPoint3D(g_PointsProcessedB[i + 1]));
 		curvatures.push_back(curv);
 		if (curv < minCurv) minCurv = curv;
 		if (curv > maxCurv) maxCurv = curv;
+    // std::cout << "C = " << curv << '\n';
 	}
 
 	// std::cout << "Min = " << minCurv << " Max = " << maxCurv << '\n';
