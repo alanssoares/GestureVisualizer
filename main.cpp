@@ -2,268 +2,303 @@
 // Includes
 //---------------------------------------------------------------------------
 #include <iostream>
+#include <limits>
 
-#include <boost/thread/thread.hpp>
-#include <pcl/common/common_headers.h>
-#include <pcl/io/pcd_io.h>
-#include <pcl/visualization/pcl_visualizer.h>
-#include <pcl/console/parse.h>
+#include <glm/vec3.hpp> 
+#include <glm/vec4.hpp> 
+#include <glm/mat4x4.hpp> 
+#include <glm/gtc/matrix_transform.hpp> 
+#include <glm/gtc/type_ptr.hpp> 
+
+#include <GL/glew.h>
+#include <GLFW/glfw3.h>
 
 #include "util/ConstantsUtil.h"
 #include "util/Util.h"
 #include "util/FileUtil.h"
 
-using pcl::PointCloud;
-using pcl::PointXYZ;
+#include "util/initShaders.h"
+#include "util/Arcball.h"
+
+
+GLuint  shader;
+
+GLuint  axisVBO[3];
+GLuint  gestureOriVBO[4];
+GLuint  gestureProcVBO[4];
+GLuint  numGestureOriVBO_A, 
+        numGestureOriVBO_B,
+        numGestureProcVBO_A,
+        numGestureProcVBO_B;
+
+bool    drawRef     = true,
+        drawGesture = true,
+        redraw      = true;
+
+float   angleX      = 0.0f,
+        angleY      = 0.0f,
+        angleZ      = 0.0f;
 
 Util g_Util;
-std::vector<type_gesture> m_AllGestures;
-std::vector<type_gesture> g_Gestures;
-std::vector<pcl::PointXYZRGB> g_PointsNormalA, g_PointsNormalB, g_PointsProcessedA, g_PointsProcessedB;
-std::string g_IdCloudA = "cloudA", g_IdCloudB = "cloudB", g_NameMethodCombination;
-std::vector<pcl::visualization::Camera> g_Cam;
-int g_IdView1(0), g_IdView2(0), g_np = 1, id_Gesture = 0, g_Methods = 1;
-double g_curvature_threshold = g_Util.m_CurvThreshold;
+std::vector<type_gesture>   m_AllGestures;
+std::vector<type_gesture>   g_Gestures;
 
-void loadAll(){
+//std::vector<pcl::Point3D> g_PointsNormalA, g_PointsNormalB, g_PointsProcessedA, g_PointsProcessedB;
+std::vector<Point3D>    g_PointsNormalA, 
+                        g_PointsNormalB, 
+                        g_PointsProcessedA, 
+                        g_PointsProcessedB;
+
+std::string             g_IdCloudA = "cloudA", 
+                        g_IdCloudB = "cloudB", 
+                        g_NameMethodCombination;
+
+int     g_IdView1(0), 
+        g_IdView2(0), 
+        g_np        = 1, 
+        id_Gesture  = 0, 
+        g_Methods   = 1,
+        w,
+        h;
+
+double  g_curvature_threshold = g_Util.m_CurvThreshold,
+        g_min_curvature = std::numeric_limits<double>::max(),
+        g_max_curvature = -std::numeric_limits<double>::max();
+
+static Arcball arcball( 800, 400, 1.5f, true, true );
+
+ 
+/// ***********************************************************************
+/// **
+/// ***********************************************************************
+
+void loadAll() {
+
 	FileUtil& futil = FileUtil::getInstance();
+
 	futil.loadGestures(NAME_FILE_DATA_NORMALIZED);
-	m_AllGestures.clear();
-	m_AllGestures.reserve(futil.mGesturesOneHand.size() + futil.mGesturesTwoHands.size());
-	m_AllGestures.insert( m_AllGestures.end(), futil.mGesturesOneHand.begin(), futil.mGesturesOneHand.end() );
-	m_AllGestures.insert( m_AllGestures.end(), futil.mGesturesTwoHands.begin(), futil.mGesturesTwoHands.end() );
-	std::sort(m_AllGestures.begin(), m_AllGestures.end(), MathUtil::sortByName);
+
+	g_Gestures.clear();
+	g_Gestures.reserve(futil.mGesturesOneHand.size() + futil.mGesturesTwoHands.size());
+	g_Gestures.insert( g_Gestures.end(), futil.mGesturesOneHand.begin(), futil.mGesturesOneHand.end() );
+	g_Gestures.insert( g_Gestures.end(), futil.mGesturesTwoHands.begin(), futil.mGesturesTwoHands.end() );
+
+	std::sort(g_Gestures.begin(), g_Gestures.end(), MathUtil::sortByName);
+
+  cout << "number of Gestures:" << endl;
+  cout << "   One Hand  = " << futil.mGesturesOneHand.size() << endl;
+  cout << "   Two Hands = " << futil.mGesturesTwoHands.size() << endl;
+  cout << "   Total     = " << m_AllGestures.size() << endl;
 }
 
-std::vector<pcl::PointXYZRGB> converterToPointXYZ(std::vector<Point3D> points){
-  std::vector<pcl::PointXYZRGB> pointsConverted;
-  pcl::PointXYZRGB newPoint;
+/// ***********************************************************************
+/// **
+/// ***********************************************************************
+
+std::vector<Point3D> converterToPointXYZ(std::vector<Point3D> points) {
+
+  std::vector<Point3D> pointsConverted;
+
+  Point3D newPoint;
+
   size_t n = points.size();
-  for (int i = 0; i < n; i++){
-    newPoint.x = points[i].X;
-    newPoint.y = points[i].Y;
-    newPoint.z = points[i].Z;
+
+  for (int i = 0; i < n; i++) {
+    newPoint.X = points[i].X;
+    newPoint.Y = points[i].Y;
+    newPoint.Z = points[i].Z;
     pointsConverted.push_back(newPoint);
-  }
+    }
+
+  for (int i = 0; i < n; i++) {
+    pointsConverted[i].r = 0.0f;
+    pointsConverted[i].g = 1.0f;
+    pointsConverted[i].b = 1.0f;
+    }
+
   return pointsConverted;
 }
+ 
+/// ***********************************************************************
+/// **
+/// ***********************************************************************
 
-void clearAllVectores(){
-  g_PointsNormalA.clear();
-  g_PointsNormalB.clear();
-  g_PointsProcessedA.clear();
-  g_PointsProcessedB.clear();
+float calcCurvature(Point3D a, Point3D b, Point3D c) {
+
+    return MathUtil::calcCurvature(a, b, c);
 }
+ 
+/// ***********************************************************************
+/// **
+/// ***********************************************************************
 
-void removeAll(pcl::visualization::PCLVisualizer *viewer){
-  viewer->removeAllShapes(g_IdView1);
-  viewer->removeAllShapes(g_IdView2);
-  viewer->removePointCloud(g_IdCloudA, g_IdView1);
-  viewer->removePointCloud(g_IdCloudB, g_IdView2);
-}
+GLuint buildVBONormalGesture(std::vector<Point3D> ptos, GLuint vVBO, GLuint cVBO) {
 
-Point3D converterToPoint3D(pcl::PointXYZRGB point){
-    Point3D newPoint;
-    newPoint.X = point.x;
-    newPoint.Y = point.y;
-    newPoint.Z = point.z;
-    return newPoint;
-}
+  size_t n = ptos.size();
 
-float calcCurvature(pcl::PointXYZRGB a, pcl::PointXYZRGB b, pcl::PointXYZRGB c){
-    return MathUtil::calcCurvature(converterToPoint3D(a), converterToPoint3D(b), converterToPoint3D(c));
-}
+  std::vector<double> vertVBO;
+  std::vector<double> colorVBO;
 
-void improveCurrentGesture(){
+  g_min_curvature = std::numeric_limits<double>::max();
+  g_max_curvature = -std::numeric_limits<double>::max();
 
-  g_PointsNormalA = converterToPointXYZ(g_Gestures[id_Gesture].handOne.positions);
-  g_PointsNormalB = converterToPointXYZ(g_Gestures[id_Gesture].handTwo.positions);
+  for (int i = 0; i < n - 1; i ++) {
+    
+    vertVBO.push_back(ptos[i].X);
+    vertVBO.push_back(ptos[i].Y);
+    vertVBO.push_back(ptos[i].Z);
 
-  if(g_Methods == 1){
-    g_NameMethodCombination = "Laplacian + DouglasPeucker";
-    g_PointsProcessedA = converterToPointXYZ(MathUtil::simplify(MathUtil::smoothMeanNeighboring(g_Gestures[id_Gesture].handOne.positions), g_Util.m_DougThreshold, false));
-    g_PointsProcessedB = converterToPointXYZ(MathUtil::simplify(MathUtil::smoothMeanNeighboring(g_Gestures[id_Gesture].handTwo.positions), g_Util.m_DougThreshold, false));
-  } else if(g_Methods == 2) {
-    g_NameMethodCombination = "B-Spline + DouglasPeucker";
-    g_PointsProcessedA = converterToPointXYZ(MathUtil::simplify(BSpline::uniformFitting(g_Gestures[id_Gesture].handOne.positions), g_Util.m_DougThreshold, false));
-    g_PointsProcessedB = converterToPointXYZ(MathUtil::simplify(BSpline::uniformFitting(g_Gestures[id_Gesture].handTwo.positions), g_Util.m_DougThreshold, false));
-  } else if(g_Methods == 3) {
-    g_NameMethodCombination = "Laplacian + Curvature";
-    g_PointsProcessedA = converterToPointXYZ(MathUtil::reduceByCurvature(MathUtil::smoothMeanNeighboring(g_Gestures[id_Gesture].handOne.positions), g_curvature_threshold));
-    g_PointsProcessedB = converterToPointXYZ(MathUtil::reduceByCurvature(MathUtil::smoothMeanNeighboring(g_Gestures[id_Gesture].handTwo.positions), g_curvature_threshold));
-  } else if(g_Methods == 4) {
-    g_NameMethodCombination = "B-Spline + Curvature";
-		BSpline spline;
-    g_PointsProcessedA = converterToPointXYZ(MathUtil::reduceByCurvature(spline.compute(g_Gestures[id_Gesture].handOne.positions, 3, 0.01), g_curvature_threshold));
-    g_PointsProcessedB = converterToPointXYZ(MathUtil::reduceByCurvature(spline.compute(g_Gestures[id_Gesture].handTwo.positions, 3, 0.01), g_curvature_threshold));
-  } else if(g_Methods == 5) {
-    g_NameMethodCombination = "DouglasPeucker";
-    g_PointsProcessedA = converterToPointXYZ(MathUtil::simplify(g_Gestures[id_Gesture].handOne.positions, g_Util.m_DougThreshold, false));
-    g_PointsProcessedB = converterToPointXYZ(MathUtil::simplify(g_Gestures[id_Gesture].handTwo.positions, g_Util.m_DougThreshold, false));
-  } else if(g_Methods == 6) {
-    g_NameMethodCombination = "Curvature";
-    g_PointsProcessedA = converterToPointXYZ(MathUtil::reduceByCurvature(g_Gestures[id_Gesture].handOne.positions, g_curvature_threshold));
-    g_PointsProcessedB = converterToPointXYZ(MathUtil::reduceByCurvature(g_Gestures[id_Gesture].handTwo.positions, g_curvature_threshold));
-  } else if(g_Methods == 7) {
-    g_NameMethodCombination = "B-Spline";
-		BSpline spline;
-		g_PointsProcessedA = converterToPointXYZ(spline.compute(g_Gestures[id_Gesture].handOne.positions, 3, 0.01));
-		g_PointsProcessedB = converterToPointXYZ(spline.compute(g_Gestures[id_Gesture].handTwo.positions, 3, 0.01));
-  } else if(g_Methods == 8) {
-    g_NameMethodCombination = "Laplacian";
-    g_PointsProcessedA = converterToPointXYZ(MathUtil::smoothMeanNeighboring(g_Gestures[id_Gesture].handOne.positions));
-    g_PointsProcessedB = converterToPointXYZ(MathUtil::smoothMeanNeighboring(g_Gestures[id_Gesture].handTwo.positions));
-  } else if (g_Methods == 9) {
-    g_NameMethodCombination = "Normalized between -1 and 1";
-    Point3D max = MathUtil::findMaxFromTwo(g_Gestures[id_Gesture].handOne.positions, g_Gestures[id_Gesture].handTwo.positions);
-    Point3D min = MathUtil::findMinFromTwo(g_Gestures[id_Gesture].handOne.positions, g_Gestures[id_Gesture].handTwo.positions);
-    g_PointsProcessedA = converterToPointXYZ(MathUtil::normalizeTrajectory(g_Gestures[id_Gesture].handOne.positions, min, max));
-    g_PointsProcessedB = converterToPointXYZ(MathUtil::normalizeTrajectory(g_Gestures[id_Gesture].handTwo.positions, min, max));
-  }
- }
+    double curv = MathUtil::calcCurvature ( ptos[i + 0],
+                                            ptos[i + 1],
+                                            ptos[i + 2]
+                                          );
 
-void viewLabels(pcl::visualization::PCLVisualizer *viewer){
-	int x = 10, y = 10;
+    ptos[i].curvature = curv;
 
-	viewer->addText("Name : " + g_Gestures[id_Gesture].name, x, y + 10, "v1 text", g_IdView1);
-	viewer->addText("Name : " + g_Gestures[id_Gesture].name, x, y + 10, "v2 text", g_IdView2);
-  viewer->addText("Nº Points: " + MathUtil::intToString(g_PointsNormalA.size()), x, y, "v3 text", g_IdView1);
-	viewer->addText("Nº Points: " + MathUtil::intToString(g_PointsProcessedA.size()), x, y, "v4 text", g_IdView2);
+    if ( curv < g_min_curvature )
+      g_min_curvature = curv;
 
-	if (g_Methods == 3 || g_Methods == 4 || g_Methods == 6) {
-		viewer->addText("Threshold Curvature: " + MathUtil::floatToString(g_curvature_threshold), x, y + 20, "v5 text", g_IdView2);
-		viewer->addText("Method: " + g_NameMethodCombination, x, y + 30, "v6 text", g_IdView2);
-	} else if (g_Methods == 1 || g_Methods == 2 || g_Methods == 5) {
-		viewer->addText("Threshold DouglasPeucker: " + MathUtil::floatToString(g_Util.m_DougThreshold), x, y + 20, "v7 text", g_IdView2);
-		viewer->addText("Method: " + g_NameMethodCombination, x, y + 30, "v8 text", g_IdView2);
-	} else {
-		viewer->addText("Method: " + g_NameMethodCombination, x, y + 20, "v9 text", g_IdView2);
-	}
-}
-
-void viewNormalGesture(pcl::visualization::PCLVisualizer *viewer){
-  size_t nA = g_PointsNormalA.size();
-	Point3D color;
-	color.r = 1.0; color.g = 0.0; color.b = 0.0;
-  for (int i = 0; i < nA - 1; i ++){
-		std::ostringstream os;
-		os << "line_normal_a_" << color.r << "_" << color.g << "_" << color.b << "_" << i;
-		viewer->addLine<pcl::PointXYZRGB>(g_PointsNormalA[i], g_PointsNormalA[i + 1], color.r, color.g, color.b, os.str(), g_IdView1);
-  }
-  size_t nB = g_PointsNormalB.size();
-  for (int i = 0; i < nB - 1; i++){
-		std::ostringstream os;
-		os << "line_normal_b_" << color.r << "_" << color.g << "_" << color.b << "_" << i;
-		viewer->addLine<pcl::PointXYZRGB>(g_PointsNormalB[i], g_PointsNormalB[i + 1], color.r, color.g, color.b, os.str(), g_IdView1);
-  }
-}
-
-void viewProcessedGesture(pcl::visualization::PCLVisualizer *viewer){
-  size_t nA = g_PointsProcessedA.size();
-	Point3D color;
-	double curv = 0.0;
-	std::cout << "T = " << g_curvature_threshold << '\n';
-  for (int i = 0; i < nA - 2; i+=2){
-		curv = MathUtil::calcCurvature(
-			converterToPoint3D(g_PointsProcessedA[i]),
-			converterToPoint3D(g_PointsProcessedA[i + 1]),
-			converterToPoint3D(g_PointsProcessedA[i + 2]));
-		if (abs(curv) < g_curvature_threshold) {
-			color.r = 0.0; color.g = 0.0; color.b = 1.0;
-		} else {
-			color.r = 0.0; color.g = 1.0; color.b = 0.0;
-		}
-		std::ostringstream os;
-		os << "line_pros_a_" << color.r << "_" << color.g << "_" << color.b << "_" << i;
-		viewer->addLine<pcl::PointXYZRGB>(g_PointsProcessedA[i], g_PointsProcessedA[i + 1], color.r, color.g, color.b, os.str(), g_IdView2);
-		os << "line_pros_a_" << i + 1;
-		viewer->addLine<pcl::PointXYZRGB>(g_PointsProcessedA[i + 1], g_PointsProcessedA[i + 2], color.r, color.g, color.b, os.str(), g_IdView2);
-  }
-  size_t nB = g_PointsProcessedB.size();
-  for (int i = 0; i < nB - 2; i+=2){
-		curv = MathUtil::calcCurvature(
-			converterToPoint3D(g_PointsProcessedB[i]),
-			converterToPoint3D(g_PointsProcessedB[i + 1]),
-			converterToPoint3D(g_PointsProcessedB[i + 2]));
-			if (abs(curv) < g_curvature_threshold) {
-				color.r = 0.0; color.g = 0.0; color.b = 1.0;
-			} else {
-				color.r = 0.0; color.g = 1.0; color.b = 0.0;
-			}
-		std::ostringstream os;
-		os << "line_pros_b_" << color.r << "_" << color.g << "_" << color.b << "_" << i;
-		viewer->addLine<pcl::PointXYZRGB>(g_PointsProcessedB[i], g_PointsProcessedB[i + 1], color.r, color.g, color.b, os.str(), g_IdView2);
-		os << "line_pros_b_" << i + 1;
-		viewer->addLine<pcl::PointXYZRGB>(g_PointsProcessedB[i + 1], g_PointsProcessedB[i + 2], color.r, color.g, color.b, os.str(), g_IdView2);
-  }
-}
-
-void viewShapes(pcl::visualization::PCLVisualizer *viewer){
-  //Clear all global declared vectores
-  clearAllVectores();
-  //Remove all shapes, lines, etc from the view
-  removeAll(viewer);
-  //Reload all gestures
-  g_Gestures = m_AllGestures;
-  //Transform and process the gestures of the viewport 1 and 2
-  improveCurrentGesture();
-  //Plot all labels in the screen
-  viewLabels(viewer);
-  //Plot the normal gesture
-  viewNormalGesture(viewer);
-  //Plot the processed gesture
-  viewProcessedGesture(viewer);
-}
-
-void keyboardEventOccurred (const pcl::visualization::KeyboardEvent &event, void* viewer_void)
-{
-  pcl::visualization::PCLVisualizer *viewer = static_cast<pcl::visualization::PCLVisualizer *> (viewer_void);
-
-  if(event.keyDown()){
-    size_t n = g_Gestures.size() - 1;
-    if(event.getKeySym() == "t"){
-        g_curvature_threshold += g_Util.m_CurvThreshold;
-        g_Util.m_DougThreshold += 0.01;
-    } else if(event.getKeySym() == "y"){
-        if(g_curvature_threshold > g_Util.m_CurvThreshold) g_curvature_threshold -= g_Util.m_CurvThreshold;
-        if(g_Util.m_DougThreshold > 0.01) g_Util.m_DougThreshold -= 0.01;
-    } else if(event.getKeySym() == "n" && id_Gesture > 0){
-        id_Gesture -= 1;
-    } else if(event.getKeySym() == "m" && id_Gesture < n){
-        id_Gesture += 1;
+    if ( curv > g_max_curvature )
+      g_max_curvature = curv;
     }
-    viewShapes(viewer);
-  }
+
+  double range = g_max_curvature - g_min_curvature;
+
+  for (int i = 0; i < n - 1; i ++) {
+
+    ptos[i].r = (ptos[i].curvature - g_min_curvature) / range;
+    ptos[i].g = 1.0 - (ptos[i].curvature - g_min_curvature) / range;
+    ptos[i].b = 1.0;
+
+    colorVBO.push_back(ptos[i].X);
+    colorVBO.push_back(ptos[i].Y);
+    colorVBO.push_back(ptos[i].Z);
+    }
+
+  assert(colorVBO.size() == vertVBO.size());
+  
+  glBindBuffer( GL_ARRAY_BUFFER, vVBO);
+
+  glBufferData( GL_ARRAY_BUFFER, sizeof(double)*vertVBO.size(), 
+                vertVBO.data(), GL_STATIC_DRAW);
+
+  glBindBuffer( GL_ARRAY_BUFFER, cVBO);
+
+  glBufferData( GL_ARRAY_BUFFER, sizeof(float)*colorVBO.size(), 
+                colorVBO.data(), GL_STATIC_DRAW);
+
+  vertVBO.clear();
+  colorVBO.clear();
+
+  return n;
 }
 
-boost::shared_ptr<pcl::visualization::PCLVisualizer> viewCurvesVis()
-{
-  boost::shared_ptr<pcl::visualization::PCLVisualizer> viewer (new pcl::visualization::PCLVisualizer ("3D Curve Viewer"));
-  pcl::PointXYZ cameraPos, cameraView, cameraFocal;
+/// ***********************************************************************
+/// **
+/// ***********************************************************************
 
-  loadAll();
+void improveCurrentGesture() {
+  
+  BSpline spline;
 
-  viewer->initCameraParameters ();
+  switch (g_Methods) {
 
-  viewer->createViewPort(0.0, 0.0, 0.5, 1.0, g_IdView1);
-  viewer->createViewPort(0.5, 0.0, 1.0, 1.0, g_IdView2);
+    case 1  : g_NameMethodCombination = "Laplacian + DouglasPeucker";
+              g_PointsProcessedA = converterToPointXYZ(MathUtil::simplify(MathUtil::smoothMeanNeighboring(g_Gestures[id_Gesture].handOne.positions), g_Util.m_DougThreshold, false));
+              g_PointsProcessedB = converterToPointXYZ(MathUtil::simplify(MathUtil::smoothMeanNeighboring(g_Gestures[id_Gesture].handTwo.positions), g_Util.m_DougThreshold, false));
+              break;
 
-  viewShapes(viewer.get());
+    case 2  : g_NameMethodCombination = "B-Spline + DouglasPeucker";
+              g_PointsProcessedA = converterToPointXYZ(MathUtil::simplify(BSpline::uniformFitting(g_Gestures[id_Gesture].handOne.positions), g_Util.m_DougThreshold, false));
+              g_PointsProcessedB = converterToPointXYZ(MathUtil::simplify(BSpline::uniformFitting(g_Gestures[id_Gesture].handTwo.positions), g_Util.m_DougThreshold, false));
+              break;
 
-  viewer->setBackgroundColor (0, 0, 0, g_IdView1);
-  viewer->setBackgroundColor (0, 0, 0, g_IdView2);
+    case 3  : g_NameMethodCombination = "Laplacian + Curvature";
+              g_PointsProcessedA = converterToPointXYZ(MathUtil::reduceByCurvature(MathUtil::smoothMeanNeighboring(g_Gestures[id_Gesture].handOne.positions), g_curvature_threshold));
+              g_PointsProcessedB = converterToPointXYZ(MathUtil::reduceByCurvature(MathUtil::smoothMeanNeighboring(g_Gestures[id_Gesture].handTwo.positions), g_curvature_threshold));
+              break;
 
-  viewer->addCoordinateSystem (1.0);
-  viewer->registerKeyboardCallback (keyboardEventOccurred, (void*)viewer.get ());
+    case 4  : g_NameMethodCombination = "B-Spline + Curvature";
+              g_PointsProcessedA = converterToPointXYZ(MathUtil::reduceByCurvature(spline.compute(g_Gestures[id_Gesture].handOne.positions, 3, 0.01), g_curvature_threshold));
+              g_PointsProcessedB = converterToPointXYZ(MathUtil::reduceByCurvature(spline.compute(g_Gestures[id_Gesture].handTwo.positions, 3, 0.01), g_curvature_threshold));
+              break;
 
-  cameraPos.x = 2.32234; cameraPos.y = 4.85785; cameraPos.z = 1.32948;
-  cameraView.x = -0.0467694; cameraView.y = -0.0729935; cameraView.z = 0.996235;
-  cameraFocal.x = 0.431872; cameraFocal.y = -0.250526; cameraFocal.z = 0.866443;
-  viewer->setCameraPosition(cameraPos.x, cameraPos.y, cameraPos.z,
-                            cameraView.x, cameraView.y, cameraView.z,
-                            cameraFocal.x, cameraFocal.y, cameraFocal.z);
-  return (viewer);
+    case 5  : g_NameMethodCombination = "DouglasPeucker";
+              g_PointsProcessedA = converterToPointXYZ(MathUtil::simplify(g_Gestures[id_Gesture].handOne.positions, g_Util.m_DougThreshold, false));
+              g_PointsProcessedB = converterToPointXYZ(MathUtil::simplify(g_Gestures[id_Gesture].handTwo.positions, g_Util.m_DougThreshold, false));
+              break;
+
+    case 6  : g_NameMethodCombination = "Curvature";
+              g_PointsProcessedA = converterToPointXYZ(MathUtil::reduceByCurvature(g_Gestures[id_Gesture].handOne.positions, g_curvature_threshold));
+              g_PointsProcessedB = converterToPointXYZ(MathUtil::reduceByCurvature(g_Gestures[id_Gesture].handTwo.positions, g_curvature_threshold));
+              break;
+
+    case 7  : g_NameMethodCombination = "B-Spline";
+		          g_PointsProcessedA = converterToPointXYZ(spline.compute(g_Gestures[id_Gesture].handOne.positions, 3, 0.01));
+		          g_PointsProcessedB = converterToPointXYZ(spline.compute(g_Gestures[id_Gesture].handTwo.positions, 3, 0.01));
+              break;
+
+    case 8  : g_NameMethodCombination = "Laplacian";
+              g_PointsProcessedA = converterToPointXYZ(MathUtil::smoothMeanNeighboring(g_Gestures[id_Gesture].handOne.positions));
+              g_PointsProcessedB = converterToPointXYZ(MathUtil::smoothMeanNeighboring(g_Gestures[id_Gesture].handTwo.positions));
+              break;
+
+    case 9  : g_NameMethodCombination = "Normalized between -1 and 1";
+              Point3D max = MathUtil::findMaxFromTwo(g_Gestures[id_Gesture].handOne.positions, g_Gestures[id_Gesture].handTwo.positions);
+              Point3D min = MathUtil::findMinFromTwo(g_Gestures[id_Gesture].handOne.positions, g_Gestures[id_Gesture].handTwo.positions);
+              g_PointsProcessedA = converterToPointXYZ(MathUtil::normalizeTrajectory(g_Gestures[id_Gesture].handOne.positions, min, max));
+              g_PointsProcessedB = converterToPointXYZ(MathUtil::normalizeTrajectory(g_Gestures[id_Gesture].handTwo.positions, min, max));
+              break;
+    }
+
+  numGestureProcVBO_A = buildVBONormalGesture(g_PointsProcessedA, gestureProcVBO[0], gestureProcVBO[1]);
+  numGestureProcVBO_B = buildVBONormalGesture(g_PointsProcessedB, gestureProcVBO[2], gestureProcVBO[3]);
 }
+ 
+/// ***********************************************************************
+/// **
+/// ***********************************************************************
+
+void viewGesture(GLuint vbo[], GLuint nA, GLuint nB) {
+
+int attrV, attrC; 
+  
+  glBindBuffer(GL_ARRAY_BUFFER, vbo[0]);    
+  attrV = glGetAttribLocation(shader, "aPosition");
+  glVertexAttribPointer(attrV, 3, GL_FLOAT, GL_FALSE, 0, 0);
+  glEnableVertexAttribArray(attrV);
+
+  glBindBuffer(GL_ARRAY_BUFFER, vbo[1]);    
+  attrC = glGetAttribLocation(shader, "aColor");
+  glVertexAttribPointer(attrC, 3, GL_FLOAT, GL_FALSE, 0, 0);
+  glEnableVertexAttribArray(attrC);
+
+  glDrawElements(GL_LINE_STRIP, nA, GL_UNSIGNED_INT, BUFFER_OFFSET(0));
+
+  glBindBuffer(GL_ARRAY_BUFFER, vbo[2]);    
+  attrV = glGetAttribLocation(shader, "aPosition");
+  glVertexAttribPointer(attrV, 3, GL_FLOAT, GL_FALSE, 0, 0);
+  glEnableVertexAttribArray(attrV);
+
+  glBindBuffer(GL_ARRAY_BUFFER, vbo[3]);    
+  attrC = glGetAttribLocation(shader, "aColor");
+  glVertexAttribPointer(attrC, 3, GL_FLOAT, GL_FALSE, 0, 0);
+  glEnableVertexAttribArray(attrC);
+
+  glDrawElements(GL_LINE_STRIP, nB, GL_UNSIGNED_INT, BUFFER_OFFSET(0));
+
+  glDisableVertexAttribArray(attrV);
+  glDisableVertexAttribArray(attrC);
+
+  glBindBuffer(GL_ARRAY_BUFFER, 0); 
+  glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0); 
+
+
+}
+
+/// ***********************************************************************
+/// **
+/// ***********************************************************************
 
 int helpUsage()
 {
@@ -293,31 +328,391 @@ int helpUsage()
 
     return 1;
 }
+ 
+/// ***********************************************************************
+/// **
+/// ***********************************************************************
 
-void PrintCamera(){
-  cout << "Cam: " << endl
-               << " - pos: (" << g_Cam[0].pos[0] << ", "    << g_Cam[0].pos[1] << ", "    << g_Cam[0].pos[2] << ")" << endl
-               << " - view: ("    << g_Cam[0].view[0] << ", "   << g_Cam[0].view[1] << ", "   << g_Cam[0].view[2] << ")"    << endl
-               << " - focal: ("   << g_Cam[0].focal[0] << ", "  << g_Cam[0].focal[1] << ", "  << g_Cam[0].focal[2] << ")"   << endl;
+void createAxis() {
+    
+GLfloat vertices[]  =   {   0.0, 0.0, 0.0,
+                            2.0, 0.0, 0.0,
+                            0.0, 2.0, 0.0,
+                            0.0, 0.0, 2.0
+                        }; 
+
+GLuint lines[]  =   {   0, 1,
+                        0, 2,
+                        0, 3
+                    }; 
+
+GLfloat colors[]  = {   1.0, 1.0, 1.0, 1.0,
+                        1.0, 0.0, 0.0, 1.0,
+                        0.0, 1.0, 0.0, 1.0,
+                        0.0, 0.0, 1.0, 1.0
+                    }; 
+
+  
+  
+  glGenBuffers(3, axisVBO);
+
+  glBindBuffer( GL_ARRAY_BUFFER, axisVBO[0]);
+
+  glBufferData( GL_ARRAY_BUFFER, 4*3*sizeof(float), 
+                vertices, GL_STATIC_DRAW);
+
+  glBindBuffer( GL_ARRAY_BUFFER, axisVBO[1]);
+
+  glBufferData( GL_ARRAY_BUFFER, 4*4*sizeof(float), 
+                colors, GL_STATIC_DRAW);
+
+  glBindBuffer( GL_ELEMENT_ARRAY_BUFFER, axisVBO[2]);
+
+  glBufferData( GL_ELEMENT_ARRAY_BUFFER, 3*2*sizeof(unsigned int), 
+                lines, GL_STATIC_DRAW);
+
+}
+      
+/* ************************************************************************* */
+/*                                                                           */
+/* ************************************************************************* */
+
+void drawAxis() {
+
+int attrV, attrC; 
+  
+  glBindBuffer(GL_ARRAY_BUFFER, axisVBO[0]);    
+  attrV = glGetAttribLocation(shader, "aPosition");
+  glVertexAttribPointer(attrV, 3, GL_FLOAT, GL_FALSE, 0, 0);
+  glEnableVertexAttribArray(attrV);
+
+  glBindBuffer(GL_ARRAY_BUFFER, axisVBO[1]);    
+  attrC = glGetAttribLocation(shader, "aColor");
+  glVertexAttribPointer(attrC, 4, GL_FLOAT, GL_FALSE, 0, 0);
+  glEnableVertexAttribArray(attrC);
+
+  glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, axisVBO[2]);
+  glDrawElements(GL_LINES, 6, GL_UNSIGNED_INT, BUFFER_OFFSET(0));
+
+  glDisableVertexAttribArray(attrV);
+  glDisableVertexAttribArray(attrC);
+
+  glBindBuffer(GL_ARRAY_BUFFER, 0); 
+  glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0); 
 }
 
-int main(int argc, char* argv[])
-{
+/// ***********************************************************************
+/// **
+/// ***********************************************************************
 
-  if(pcl::console::find_argument (argc, argv, "-h") >= 0){
-    helpUsage();
-    return 0;
-  }
+void viewShapes() {
 
-  if(pcl::console::find_argument (argc, argv, "-m") >= 0){
-    g_Methods = atoi(argv[2]);
-  }
+  glViewport(0, 0, w/2, h);
+  viewGesture(gestureOriVBO, numGestureOriVBO_A, numGestureOriVBO_B);
 
-  boost::shared_ptr<pcl::visualization::PCLVisualizer> viewer = viewCurvesVis();
-  while (!viewer->wasStopped ()){
-    viewer->spinOnce (100);
-    viewer->getCameras(g_Cam);
-  }
-
-  return 0;
+  glViewport(w/2, 0, w/2, h);
+  viewGesture(gestureProcVBO, numGestureProcVBO_A, numGestureProcVBO_B);
 }
+
+/* ************************************************************************* */
+/*                                                                           */
+/* ************************************************************************* */
+
+void display(void) { 
+
+//  angleX += 0.05;
+//  angleY += 0.02;
+//  angleZ += 0.001;
+  
+  glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT); 
+
+  glm::mat4 P   = glm::perspective( 70.0, 1.0, 0.01, 100.0);
+  glm::mat4 V   = glm::lookAt ( glm::vec3(2.0,  2.0, 2.0),
+                                glm::vec3(0.0, 0.0, 0.0), 
+                                glm::vec3(0.0, 1.0, 0.0) 
+                              );
+
+  glm::mat4 M   = glm::mat4(1.0);
+
+  glm::mat4 rotated_view = V * arcball.createViewRotationMatrix();
+//  glm::mat4 mvp = projection * rotated_view * model;
+
+
+  M = glm::rotate( M, angleX, glm::vec3(1.0, 0.0, 0.0));
+  M = glm::rotate( M, angleY, glm::vec3(0.0, 1.0, 0.0));
+  M = glm::rotate( M, angleZ, glm::vec3(0.0, 0.0, 1.0));
+
+  glm::mat4 MVP = P * rotated_view * M;
+
+  glUseProgram(shader);
+
+  int loc = glGetUniformLocation( shader, "uMVP" );
+  glUniformMatrix4fv(loc, 1, GL_FALSE, glm::value_ptr(MVP));
+  
+  if (drawRef) {
+    glViewport(0, 0, w/2, h);
+    drawAxis();
+    glViewport(w/2, 0, w/2, h);
+    drawAxis();
+    }
+
+  glUseProgram(0);  
+
+  if (drawGesture) 
+    viewShapes();
+}
+
+/* ************************************************************************* */
+/*                                                                           */
+/* ************************************************************************* */
+
+static void error_callback(int error, const char* description) {
+    cout << "Error: " << description << endl;
+}
+
+/* ************************************************************************* */
+/*                                                                           */
+/* ************************************************************************* */
+
+static void window_size_callback(GLFWwindow* window, int width, int height) {
+    cout << "Resized window: " << width << " , " << height << endl;
+}
+
+/* ************************************************************************* */
+/*                                                                           */
+/* ************************************************************************* */
+
+void mouseButtonCallback( GLFWwindow * window, int button, int action, int mods ){
+    /* Pass the arguments to our arcball object */
+    arcball.mouseButtonCallback( window, button, action, mods );
+    redraw = true;
+}
+
+/* ************************************************************************* */
+/*                                                                           */
+/* ************************************************************************* */
+
+void cursorCallback( GLFWwindow *window, double x, double y ) {
+    /* Pass the arguments to our arcball object */
+    arcball.cursorCallback( window, x, y );
+    redraw = true;
+}
+
+/* ************************************************************************* */
+/*                                                                           */
+/* ************************************************************************* */
+
+static void key_callback(GLFWwindow* window, int key, int scancode, int action, int mods) {
+
+  size_t n = g_Gestures.size() - 1;
+
+  if (action == GLFW_PRESS) {                  
+    switch (key) {  
+      case GLFW_KEY_ESCAPE    : glfwSetWindowShouldClose(window, GLFW_TRUE);
+                                break;
+
+      case 'T'                : 
+      case 't'                : g_curvature_threshold += g_Util.m_CurvThreshold;
+                                g_Util.m_DougThreshold += 0.01;
+                                break;
+      case 'Y'                : 
+      case 'y'                : if(g_curvature_threshold > g_Util.m_CurvThreshold) 
+                                  g_curvature_threshold -= g_Util.m_CurvThreshold;
+
+                                if(g_Util.m_DougThreshold > 0.01) 
+                                  g_Util.m_DougThreshold -= 0.01;
+
+                                break;
+      case 'N'                : 
+      case 'n'                : if (id_Gesture > 0) {
+                                  id_Gesture -= 1;
+                                  g_PointsNormalA = converterToPointXYZ(g_Gestures[id_Gesture].handOne.positions);
+                                  g_PointsNormalB = converterToPointXYZ(g_Gestures[id_Gesture].handTwo.positions);
+
+                                  numGestureOriVBO_A = buildVBONormalGesture(g_PointsNormalA, gestureOriVBO[0], gestureOriVBO[1]);
+                                  numGestureOriVBO_B = buildVBONormalGesture(g_PointsNormalB, gestureOriVBO[2], gestureOriVBO[3]);
+                                  improveCurrentGesture();
+                                  }
+                                break;
+      case 'M'                : 
+      case 'm'                : if (id_Gesture < n) {
+                                  id_Gesture += 1;
+                                  g_PointsNormalA = converterToPointXYZ(g_Gestures[id_Gesture].handOne.positions);
+                                  g_PointsNormalB = converterToPointXYZ(g_Gestures[id_Gesture].handTwo.positions);
+
+                                  numGestureOriVBO_A = buildVBONormalGesture(g_PointsNormalA, gestureOriVBO[0], gestureOriVBO[1]);
+                                  numGestureOriVBO_B = buildVBONormalGesture(g_PointsNormalB, gestureOriVBO[2], gestureOriVBO[3]);
+                                  improveCurrentGesture();
+                                  }
+                                break;
+
+      case '1'                : g_Methods = 1;
+                                improveCurrentGesture();
+                                break;
+
+      case '2'                : g_Methods = 2;
+                                improveCurrentGesture();
+                                break;
+
+      case '3'                : g_Methods = 3;
+                                improveCurrentGesture();
+                                break;
+
+      case '4'                : g_Methods = 4;
+                                improveCurrentGesture();
+                                break;
+
+      case '5'                : g_Methods = 5;
+                                improveCurrentGesture();
+                                break;
+
+      case '6'                : g_Methods = 6;
+                                improveCurrentGesture();
+                                break;
+
+      case '7'                : g_Methods = 7;
+                                improveCurrentGesture();
+                                break;
+
+      case '8'                : g_Methods = 8;
+                                improveCurrentGesture();
+                                break;
+
+      case '9'                : g_Methods = 9;
+                                improveCurrentGesture();
+                                break;
+    }
+  redraw = true;
+  }
+
+}
+
+/* ************************************************************************* */
+/*                                                                           */
+/* ************************************************************************* */
+
+static GLFWwindow* initGLFW(char* nameWin, int w, int h) {
+
+  glfwSetErrorCallback(error_callback);
+
+  if (!glfwInit())
+      exit(EXIT_FAILURE);
+
+  glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 2);
+  glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 0);
+
+  GLFWwindow* window = glfwCreateWindow(w, h, nameWin, NULL, NULL);
+  if (!window) {
+      glfwTerminate();
+      exit(EXIT_FAILURE);
+    }
+
+  glfwSetWindowSizeCallback(window, window_size_callback);
+  glfwSetWindowSizeCallback(window, window_size_callback);
+  glfwSetKeyCallback(window, key_callback);
+  glfwSetCursorPosCallback( window, cursorCallback );
+  glfwSetMouseButtonCallback( window, mouseButtonCallback );
+
+  glfwMakeContextCurrent(window);
+
+  glfwSwapInterval(1);
+
+  return (window);
+}
+
+
+/* ************************************************************************* */
+/*                                                                           */
+/* ************************************************************************* */
+
+void initShaders(void) {
+
+  // Load shaders and use the resulting shader program
+  shader = InitShader( "../shaders/basicShader.vert", "../shaders/basicShader.frag" );
+}
+
+/* ************************************************************************* */
+/*                                                                           */
+/* ************************************************************************* */
+
+void initGL(GLFWwindow* window) {
+
+  glClearColor(0.0, 0.0, 0.0, 0.0); 
+  
+  if (glewInit()) {
+    cout << "Unable to initialize GLEW ... exiting" << endl;
+    exit(EXIT_FAILURE);
+    }
+    
+  cout << "Status: Using GLEW " << glewGetString(GLEW_VERSION) << endl; 
+  
+  cout << "Opengl Version: " << glGetString(GL_VERSION) << endl;
+  cout << "Opengl Vendor : " << glGetString(GL_VENDOR) << endl;
+  cout << "Opengl Render : " << glGetString(GL_RENDERER) << endl;
+  cout << "Opengl Shading Language Version : " << glGetString(GL_SHADING_LANGUAGE_VERSION) << endl;
+
+  glfwGetFramebufferSize(window, &w, &h);
+
+  glPointSize(3.0);
+  glEnable(GL_DEPTH_TEST);
+
+  initShaders();
+
+  glGenBuffers(4, gestureOriVBO);
+
+  if (gestureOriVBO[0] == 0) {
+    cout << "Error gestureOriVBO" << endl;
+    }
+    
+  glGenBuffers(4, gestureProcVBO);
+
+  if (gestureProcVBO[0] == 0) {
+    cout << "Error gestureOriVBO" << endl;
+    }
+}
+
+/* ************************************************************************* */
+/*                                                                           */
+/* ************************************************************************* */
+
+static void GLFW_MainLoop(GLFWwindow* window) {
+
+   while (!glfwWindowShouldClose(window)) {
+
+      if (redraw) {
+        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
+        display();
+
+        glfwSwapBuffers(window);
+        redraw = false;
+        }
+
+        glfwPollEvents();
+      }
+}
+
+/* ************************************************************************* */
+/* ************************************************************************* */
+/*                                                                           */
+/* ************************************************************************* */
+/* ************************************************************************* */
+
+int main(int argc, char* argv[]) {
+
+  GLFWwindow* window;
+
+  window = initGLFW(argv[0], 800, 400);
+
+  loadAll();
+  initGL(window);
+  createAxis();
+
+  GLFW_MainLoop(window);
+
+  glfwDestroyWindow(window);
+  glfwTerminate();
+
+  exit(EXIT_SUCCESS);
+}
+

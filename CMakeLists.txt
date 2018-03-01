@@ -7,20 +7,31 @@ set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11 -Wno-deprecated -g")
 # Define o nome do projeto
 project(gesture_tracking_project)
 
-#Acha diretorios do opengl, glut, pcl e vtk
+#Acha diretorios do opengl, glew, glfw
+
+find_package (PkgConfig REQUIRED)
+
 find_package(OpenGL REQUIRED)
-find_package(GLUT REQUIRED)
-find_package(PCL 1.8 REQUIRED COMPONENTS common io visualization console)
+
+include_directories(/opt/local/include/)
+
+find_package(glfw3 3.2 REQUIRED)
+
+find_package(GLEW REQUIRED)
+if (GLEW_FOUND)
+    include_directories(${GLEW_INCLUDE_DIRS})
+    link_libraries(${GLEW_LIBRARIES})
+endif()
 
 #Acha e linka diretorios
 FIND_LIBRARY(NAMES HINTS "/usr/lib" "/opt/local/lib")
 LINK_DIRECTORIES(${PCL_LIBRARY_DIRS})
 
 # Inclui diretorios necessarios já encontrados
-include_directories(${PCL_INCLUDE_DIRS} ${GLUT_INCLUDE_DIRS})
+include_directories(${GLUT_INCLUDE_DIRS})
 
 # Inclui definições da lib PCL
-add_definitions (${PCL_DEFINITIONS})
+#add_definitions (${PCL_DEFINITIONS})
 
 # Inclui diretorios do projeto
 include_directories ("${PROJECT_SOURCE_DIR}")
@@ -35,4 +46,4 @@ file(GLOB SOURCES
 add_executable(start ${SOURCES})
 
 # Linka as aplicações com as libs
-target_link_libraries(start ${OPENGL_LIBRARIES} ${GLUT_LIBRARY} ${PCL_LIBRARIES} util)
+target_link_libraries(start ${OPENGL_LIBRARIES} ${GLUT_LIBRARY} util glfw)
