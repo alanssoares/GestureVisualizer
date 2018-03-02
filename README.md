@@ -5,9 +5,7 @@ View and apply methods on gestures
 
 - GCC 4.x
 
-- Python 2.6+/3.x
-
-- PCL 1.8
+- OpenGL/GLFW/GLEW
 
 ## Compile and run (OSX and Linux)
 
