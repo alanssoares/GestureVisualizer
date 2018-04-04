@@ -122,8 +122,8 @@ void improveCurrentGesture(){
   } else if(g_Methods == 4) {
     g_NameMethodCombination = "B-Spline + Curvature";
 		BSpline spline;
-    g_PointsProcessedA = converterToPointXYZ(MathUtil::reduceByCurvature(spline.compute(g_Gestures[id_Gesture].handOne.positions, 3, 0.01), g_curvature_threshold));
-    g_PointsProcessedB = converterToPointXYZ(MathUtil::reduceByCurvature(spline.compute(g_Gestures[id_Gesture].handTwo.positions, 3, 0.01), g_curvature_threshold));
+    g_PointsProcessedA = converterToPointXYZ(MathUtil::reduceByCurvature(spline.compute(g_Gestures[id_Gesture].handOne.positions, 3, 0.025), g_curvature_threshold));
+    g_PointsProcessedB = converterToPointXYZ(MathUtil::reduceByCurvature(spline.compute(g_Gestures[id_Gesture].handTwo.positions, 3, 0.025), g_curvature_threshold));
   } else if(g_Methods == 5) {
     g_NameMethodCombination = "DouglasPeucker";
     g_PointsProcessedA = converterToPointXYZ(MathUtil::simplify(g_Gestures[id_Gesture].handOne.positions, g_Util.m_DougThreshold, false));
@@ -135,8 +135,8 @@ void improveCurrentGesture(){
   } else if(g_Methods == 7) {
     g_NameMethodCombination = "B-Spline";
 		BSpline spline;
-		g_PointsProcessedA = converterToPointXYZ(spline.compute(g_Gestures[id_Gesture].handOne.positions, 3, 0.01));
-		g_PointsProcessedB = converterToPointXYZ(spline.compute(g_Gestures[id_Gesture].handTwo.positions, 3, 0.01));
+		g_PointsProcessedA = converterToPointXYZ(spline.compute(g_Gestures[id_Gesture].handOne.positions, 3, 0.025));
+		g_PointsProcessedB = converterToPointXYZ(spline.compute(g_Gestures[id_Gesture].handTwo.positions, 3, 0.025));
   } else if(g_Methods == 8) {
     g_NameMethodCombination = "Laplacian";
     g_PointsProcessedA = converterToPointXYZ(MathUtil::smoothMeanNeighboring(g_Gestures[id_Gesture].handOne.positions));
@@ -172,70 +172,109 @@ void viewLabels(pcl::visualization::PCLVisualizer *viewer){
 void viewNormalGesture(pcl::visualization::PCLVisualizer *viewer){
   size_t nA = g_PointsNormalA.size();
 	Point3D color;
-	color.r = 1.0; color.g = 0.0; color.b = 0.0;
-  for (int i = 0; i < nA - 1; i ++){
-		std::ostringstream os;
-		os << "line_normal_a_" << color.r << "_" << color.g << "_" << color.b << "_" << i;
-		viewer->addLine<pcl::PointXYZRGB>(g_PointsNormalA[i], g_PointsNormalA[i + 1], color.r, color.g, color.b, os.str(), g_IdView1);
-  }
-  size_t nB = g_PointsNormalB.size();
-  for (int i = 0; i < nB - 1; i++){
-		std::ostringstream os;
-		os << "line_normal_b_" << color.r << "_" << color.g << "_" << color.b << "_" << i;
-		viewer->addLine<pcl::PointXYZRGB>(g_PointsNormalB[i], g_PointsNormalB[i + 1], color.r, color.g, color.b, os.str(), g_IdView1);
+  color.r = 0.0; color.g = 0.0; color.b = 1.0;
+	double curv = 0.0, minCurv = 99.9, maxCurv = 0.0;
+	std::cout << "T = " << g_curvature_threshold << '\n';
+  bool viewAsCurve = false;
+
+  if (viewAsCurve) {
+    std::vector<double> curvatures;
+    for (int i = 1; i < nA - 1; i+=1){
+      curv = MathUtil::calcCurvature(
+        converterToPoint3D(g_PointsNormalA[i - 1]),
+        converterToPoint3D(g_PointsNormalA[i]),
+        converterToPoint3D(g_PointsNormalA[i + 1]));
+      curvatures.push_back(curv);
+      if (curv < minCurv) minCurv = curv;
+      if (curv > maxCurv) maxCurv = curv;
+      // std::cout << "C = " << curv << '\n';
+    }
+
+    // std::cout << "Min = " << minCurv << " Max = " << maxCurv << '\n';
+    for (int i = 1; i < nA - 1; i+=1){
+      // color = getColour(curvatures[i], minCurv, maxCurv);
+      std::ostringstream os;
+      os << "line_normal_a_" << color.r << "_" << color.g << "_" << color.b << "_" << i;
+      viewer->addLine<pcl::PointXYZRGB>(g_PointsNormalA[i - 1], g_PointsNormalA[i], color.r, color.g, color.b, os.str(), g_IdView1);
+      os << "line_normal_a_" << i + 1;
+      viewer->addLine<pcl::PointXYZRGB>(g_PointsNormalA[i], g_PointsNormalA[i + 1], color.r, color.g, color.b, os.str(), g_IdView1);
+    }
+
+    size_t nB = g_PointsNormalB.size();
+    curvatures.clear();
+    curv = 0.0; minCurv = 99.9; maxCurv = 0.0;
+    for (int i = 1; i < nB - 1; i+=1){
+      curv = MathUtil::calcCurvature(
+        converterToPoint3D(g_PointsNormalB[i - 1]),
+        converterToPoint3D(g_PointsNormalB[i]),
+        converterToPoint3D(g_PointsNormalB[i + 1]));
+      curvatures.push_back(curv);
+      if (curv < minCurv) minCurv = curv;
+      if (curv > maxCurv) maxCurv = curv;
+      // std::cout << "C = " << curv << '\n';
+    }
+
+    // std::cout << "Min = " << minCurv << " Max = " << maxCurv << '\n';
+    for (int i = 1; i < nB - 1; i+=1){
+      // color = getColour(curvatures[i], minCurv, maxCurv);
+      std::ostringstream os;
+      os << "line_normal_b_" << color.r << "_" << color.g << "_" << color.b << "_" << i;
+      viewer->addLine<pcl::PointXYZRGB>(g_PointsNormalB[i - 1], g_PointsNormalB[i], color.r, color.g, color.b, os.str(), g_IdView1);
+      os << "line_normal_b_" << i + 1;
+      viewer->addLine<pcl::PointXYZRGB>(g_PointsNormalB[i], g_PointsNormalB[i + 1], color.r, color.g, color.b, os.str(), g_IdView1);
+    }
+  } else {
+    pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloudA(new pcl::PointCloud<pcl::PointXYZRGB>);
+    size_t nA = g_PointsNormalA.size();
+    for (int i = 0; i < nA; i++){
+      cloudA->points.push_back(g_PointsNormalA[i]);
+    }
+    size_t nB = g_PointsNormalB.size();
+    for (int i = 0; i < nB; i++){
+      cloudA->points.push_back(g_PointsNormalB[i]);
+    }
+    viewer->addPointCloud<pcl::PointXYZRGB> (cloudA, g_IdCloudA, g_IdView1);
+    viewer->setPointCloudRenderingProperties (pcl::visualization::PCL_VISUALIZER_POINT_SIZE, 2, g_IdCloudA);
+    viewer->setPointCloudRenderingProperties (pcl::visualization::PCL_VISUALIZER_COLOR, color.r, color.g, color.b, g_IdCloudA);
   }
 }
 
 void viewProcessedGesture(pcl::visualization::PCLVisualizer *viewer){
-  size_t nA = g_PointsProcessedA.size();
+
 	Point3D color;
-	double curv = 0.0, minCurv = 99.9, maxCurv = 0.0;
-	std::cout << "T = " << g_curvature_threshold << '\n';
+  color.r = 1.0; color.g = 0.0; color.b = 0.0;
+  bool viewAsCurve = false;
 
-	std::vector<double> curvatures;
-  for (int i = 1; i < nA - 1; i+=1){
-		curv = MathUtil::calcCurvature(
-			converterToPoint3D(g_PointsProcessedA[i - 1]),
-			converterToPoint3D(g_PointsProcessedA[i]),
-			converterToPoint3D(g_PointsProcessedA[i + 1]));
-		curvatures.push_back(curv);
-		if (curv < minCurv) minCurv = curv;
-		if (curv > maxCurv) maxCurv = curv;
-    // std::cout << "C = " << curv << '\n';
-	}
-
-	// std::cout << "Min = " << minCurv << " Max = " << maxCurv << '\n';
-	for (int i = 1; i < nA - 1; i+=1){
-		color = getColour(curvatures[i], minCurv, maxCurv);
-		std::ostringstream os;
-		os << "line_pros_a_" << color.r << "_" << color.g << "_" << color.b << "_" << i;
-		viewer->addLine<pcl::PointXYZRGB>(g_PointsProcessedA[i - 1], g_PointsProcessedA[i], color.r, color.g, color.b, os.str(), g_IdView2);
-		os << "line_pros_a_" << i + 1;
-		viewer->addLine<pcl::PointXYZRGB>(g_PointsProcessedA[i], g_PointsProcessedA[i + 1], color.r, color.g, color.b, os.str(), g_IdView2);
-  }
-
-	size_t nB = g_PointsProcessedB.size();
-	curvatures.clear();
-	curv = 0.0; minCurv = 99.9; maxCurv = 0.0;
-  for (int i = 1; i < nB - 1; i+=1){
-		curv = MathUtil::calcCurvature(
-			converterToPoint3D(g_PointsProcessedB[i - 1]),
-			converterToPoint3D(g_PointsProcessedB[i]),
-			converterToPoint3D(g_PointsProcessedB[i + 1]));
-		curvatures.push_back(curv);
-		if (curv < minCurv) minCurv = curv;
-		if (curv > maxCurv) maxCurv = curv;
-    // std::cout << "C = " << curv << '\n';
-	}
-
-	// std::cout << "Min = " << minCurv << " Max = " << maxCurv << '\n';
-  for (int i = 1; i < nB - 1; i+=1){
-		color = getColour(curvatures[i], minCurv, maxCurv);
-		std::ostringstream os;
-		os << "line_pros_b_" << color.r << "_" << color.g << "_" << color.b << "_" << i;
-		viewer->addLine<pcl::PointXYZRGB>(g_PointsProcessedB[i - 1], g_PointsProcessedB[i], color.r, color.g, color.b, os.str(), g_IdView2);
-		os << "line_pros_b_" << i + 1;
-		viewer->addLine<pcl::PointXYZRGB>(g_PointsProcessedB[i], g_PointsProcessedB[i + 1], color.r, color.g, color.b, os.str(), g_IdView2);
+  if (viewAsCurve) {
+    size_t nA = g_PointsProcessedA.size();
+  	for (int i = 1; i < nA - 1; i+=1){
+  		std::ostringstream os;
+  		os << "line_pros_a_" << color.r << "_" << color.g << "_" << color.b << "_" << i;
+  		viewer->addLine<pcl::PointXYZRGB>(g_PointsProcessedA[i - 1], g_PointsProcessedA[i], color.r, color.g, color.b, os.str(), g_IdView2);
+  		os << "line_pros_a_" << i + 1;
+  		viewer->addLine<pcl::PointXYZRGB>(g_PointsProcessedA[i], g_PointsProcessedA[i + 1], color.r, color.g, color.b, os.str(), g_IdView2);
+    }
+  	size_t nB = g_PointsProcessedB.size();
+    for (int i = 1; i < nB - 1; i+=1){
+  		std::ostringstream os;
+  		os << "line_pros_b_" << color.r << "_" << color.g << "_" << color.b << "_" << i;
+  		viewer->addLine<pcl::PointXYZRGB>(g_PointsProcessedB[i - 1], g_PointsProcessedB[i], color.r, color.g, color.b, os.str(), g_IdView2);
+  		os << "line_pros_b_" << i + 1;
+  		viewer->addLine<pcl::PointXYZRGB>(g_PointsProcessedB[i], g_PointsProcessedB[i + 1], color.r, color.g, color.b, os.str(), g_IdView2);
+    }
+  } else {
+    pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloudB(new pcl::PointCloud<pcl::PointXYZRGB>);
+    size_t nA = g_PointsProcessedA.size();
+    for (int i = 0; i < nA; i++){
+      cloudB->points.push_back(g_PointsProcessedA[i]);
+    }
+    size_t nB = g_PointsProcessedB.size();
+    for (int i = 0; i < nB; i++){
+      cloudB->points.push_back(g_PointsProcessedB[i]);
+    }
+    viewer->addPointCloud<pcl::PointXYZRGB> (cloudB, g_IdCloudB, g_IdView2);
+    viewer->setPointCloudRenderingProperties (pcl::visualization::PCL_VISUALIZER_POINT_SIZE, 2, g_IdCloudB);
+    viewer->setPointCloudRenderingProperties (pcl::visualization::PCL_VISUALIZER_COLOR, color.r, color.g, color.b, g_IdCloudB);
   }
 }
 
